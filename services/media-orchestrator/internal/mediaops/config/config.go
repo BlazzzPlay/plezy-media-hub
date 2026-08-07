@@ -6,7 +6,7 @@ import (
 	"strconv"
 )
 
-// Config is the small, explicit runtime contract for the local MVP.
+// Config is the explicit runtime contract for Media Orchestrator.
 type Config struct {
 	APIKey      string
 	DatabaseURL string
@@ -17,28 +17,27 @@ type Config struct {
 
 func Load() (Config, error) {
 	c := Config{
-		APIKey:      os.Getenv("PRA_API_KEY"),
-		DatabaseURL: os.Getenv("PRA_DATABASE_URL"),
-		MediaConfig: os.Getenv("PRA_MEDIA_CONFIG_ROOT"),
-		StagingRoot: os.Getenv("PRA_STAGING_ROOT"),
-		Port:        8093,
+		APIKey:      os.Getenv("MEDIA_OPS_API_KEY"),
+		DatabaseURL: os.Getenv("MEDIA_OPS_DATABASE_URL"),
+		MediaConfig: os.Getenv("MEDIA_OPS_CONFIG_ROOT"),
+		StagingRoot: os.Getenv("MEDIA_OPS_STAGING_ROOT"),
+		Port:        8100,
 	}
-	if raw := os.Getenv("PRA_PORT"); raw != "" {
+	if raw := os.Getenv("MEDIA_OPS_PORT"); raw != "" {
 		port, err := strconv.Atoi(raw)
 		if err != nil || port < 1 || port > 65535 {
-			return Config{}, fmt.Errorf("PRA_PORT inválido: %q", raw)
+			return Config{}, fmt.Errorf("MEDIA_OPS_PORT inválido: %q", raw)
 		}
 		c.Port = port
 	}
 	if c.DatabaseURL == "" {
-		return Config{}, fmt.Errorf("PRA_DATABASE_URL es obligatorio")
+		return Config{}, fmt.Errorf("MEDIA_OPS_DATABASE_URL es obligatorio")
 	}
 	if c.MediaConfig == "" {
-		return Config{}, fmt.Errorf("PRA_MEDIA_CONFIG_ROOT es obligatorio")
+		return Config{}, fmt.Errorf("MEDIA_OPS_CONFIG_ROOT es obligatorio")
 	}
 	if c.StagingRoot == "" {
-		return Config{}, fmt.Errorf("PRA_STAGING_ROOT es obligatorio")
+		return Config{}, fmt.Errorf("MEDIA_OPS_STAGING_ROOT es obligatorio")
 	}
 	return c, nil
 }
-

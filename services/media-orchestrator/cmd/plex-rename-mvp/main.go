@@ -27,7 +27,7 @@ func main() {
 	}
 	defer store.Close()
 	srv := &http.Server{Addr: ":" + itoa(c.Port), Handler: mvphttp.NewWithMediaRoot(store, c.APIKey, c.StagingRoot).Handler(), ReadHeaderTimeout: 5 * time.Second}
-	slog.Info("plex-rename MVP listening", "addr", srv.Addr, "media_config", c.MediaConfig, "staging_root", c.StagingRoot)
+	slog.Info("media-orchestrator listening", "addr", srv.Addr, "media_config", c.MediaConfig, "staging_root", c.StagingRoot)
 	if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		slog.Error("server failed", "error", err)
 		os.Exit(1)
@@ -44,4 +44,3 @@ func itoa(n int) string {
 	}
 	return string(b)
 }
-
