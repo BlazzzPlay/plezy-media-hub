@@ -20,8 +20,8 @@ class MediaUpdateService {
     final httpClient = client ?? http.Client();
     try {
       final package = await PackageInfo.fromPlatform();
-      final current = package.version + '+' + package.buildNumber;
-      final uri = Uri.parse(_builderBaseUrl + '/api/latest?variant=' + _variant);
+      final current = '${package.version}+${package.buildNumber}';
+      final uri = Uri.parse('$_builderBaseUrl/api/latest?variant=$_variant');
       final response = await httpClient.get(uri).timeout(const Duration(seconds: 10));
       if (response.statusCode != 200) return null;
       final body = jsonDecode(response.body) as Map<String, dynamic>;

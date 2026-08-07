@@ -116,7 +116,7 @@ class _ManageScreenState extends State<ManageScreen> {
 
   Widget _updateCard() => Card(child: ListTile(
     leading: const AppIcon(Symbols.system_update_rounded),
-    title: Text(_update == null ? 'Actualizaciones' : 'Actualización disponible: ' + _update!.version),
+    title: Text(_update == null ? 'Actualizaciones' : 'Actualización disponible: ${_update!.version}'),
     subtitle: Text(_update == null ? 'La app está actualizada o no hay una versión publicada.' : _update!.fileName),
     trailing: IconButton(
       tooltip: 'Buscar actualización',
