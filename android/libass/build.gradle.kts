@@ -8,7 +8,7 @@ plugins {
 }
 
 android {
-  namespace = "com.edde746.plezy.libass"
+  namespace = "cl.blazz.plezy.libass"
   compileSdk = 36
   // Matches the app's latest stable NDK so every project-owned native library
   // is built with the same 16 KB page-size-capable libc++ toolchain. That copy

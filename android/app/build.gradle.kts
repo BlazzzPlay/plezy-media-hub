@@ -319,7 +319,7 @@ val downloadLibdovi = tasks.register("downloadLibdovi") {
 }
 
 android {
-  namespace = "com.edde746.plezy"
+  namespace = "cl.blazz.plezy"
   compileSdk = flutter.compileSdkVersion
   buildToolsVersion = "36.1.0"
   ndkVersion = "29.0.14206865"
@@ -335,7 +335,7 @@ android {
   }
 
   defaultConfig {
-    applicationId = "com.edde746.plezy"
+    applicationId = "cl.blazz.plezy"
     // You can update the following values to match your application needs.
     // For more information, see: https://flutter.dev/to/review-gradle-config.
     minSdk = 25 // Fire OS 6.x (API 25); overrides libmpv-android's minSdk=26
