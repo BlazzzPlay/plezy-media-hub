@@ -105,10 +105,12 @@ class _ManageScreenState extends State<ManageScreen> {
         _orchestratorConnected = true;
       });
     } catch (error) {
-      if (mounted) setState(() {
-        _error = error.toString();
-        _orchestratorConnected = false;
-      });
+      if (mounted) {
+        setState(() {
+          _error = error.toString();
+          _orchestratorConnected = false;
+        });
+      }
     } finally {
       client.dispose();
       if (mounted) setState(() => _loading = false);
