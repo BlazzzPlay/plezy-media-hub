@@ -136,6 +136,16 @@ List<NavigationTab> mainScreenBottomNavigationTabs({
   }).toList();
 }
 
+/// Five labeled destinations no longer fit reliably on compact phone widths.
+/// Keep every destination reachable while switching to the compact icon layout.
+@visibleForTesting
+bool shouldHideBottomNavigationLabels({
+  required bool configuredToShowLabels,
+  required int destinationCount,
+}) {
+  return !configuredToShowLabels || destinationCount >= 5;
+}
+
 @visibleForTesting
 bool shouldPassTvosMenuToSystem({
   required bool isAppleTV,
@@ -1942,7 +1952,10 @@ class _MainScreenState extends State<MainScreen>
               SettingValueBuilder<bool>(
                 pref: SettingsService.showNavBarLabels,
                 builder: (context, showNavBarLabels, _) {
-                  final hideLabels = !showNavBarLabels;
+                  final hideLabels = shouldHideBottomNavigationLabels(
+                    configuredToShowLabels: showNavBarLabels,
+                    destinationCount: _getBottomNavigationTabs(context).length,
+                  );
                   // Re-measure whenever the bar's composition can change:
                   // this builder reruns on label toggles AND on every
                   // MainScreen rebuild (offline bar appearing/disappearing).

@@ -136,5 +136,11 @@ void main() {
 
       expect(tabs, same(allNavigationTabs));
     });
+
+    test('hides labels automatically when five or more mobile destinations are shown', () {
+      expect(shouldHideBottomNavigationLabels(configuredToShowLabels: true, destinationCount: 4), isFalse);
+      expect(shouldHideBottomNavigationLabels(configuredToShowLabels: true, destinationCount: 5), isTrue);
+      expect(shouldHideBottomNavigationLabels(configuredToShowLabels: false, destinationCount: 3), isTrue);
+    });
   });
 }
