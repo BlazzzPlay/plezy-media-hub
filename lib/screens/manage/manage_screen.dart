@@ -103,7 +103,7 @@ class _ManageScreenState extends State<ManageScreen> {
       const SizedBox(height: 8), Text('${items.length} coincidencia${items.length == 1 ? '' : 's'} · elegí una identidad'),
       const Divider(),
       for (final candidate in items) ListTile(contentPadding: EdgeInsets.zero, title: Text(candidate.title), subtitle: Text([candidate.year?.toString(), candidate.provider.toUpperCase(), if (candidate.edition.isNotEmpty) candidate.edition].whereType<String>().join(' · ')), trailing: Wrap(spacing: 4, children: [IconButton(tooltip: 'Rechazar', onPressed: () => _review(candidate, false), icon: const AppIcon(Symbols.close_rounded)), IconButton(tooltip: 'Aprobar', onPressed: () => _review(candidate, true), icon: const AppIcon(Symbols.check_rounded))])),
-    ]));
+    ])));
   }
 
   Widget _messageCard({required IconData icon, required String title, required String body}) => Card(child: Padding(padding: const EdgeInsets.all(32), child: Column(children: [AppIcon(icon, size: 42), const SizedBox(height: 12), Text(title, style: Theme.of(context).textTheme.titleLarge), const SizedBox(height: 8), Text(body, textAlign: TextAlign.center)])));
