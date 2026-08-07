@@ -999,24 +999,26 @@ class _MainScreenState extends State<MainScreen>
           ],
         ),
         if (shouldShowMediaOperationsShortcut(orchestratorReachable: _hasMediaOperations))
-          PositionedDirectional(
-            top: 8,
-            end: 72,
-            child: SafeArea(
-              bottom: false,
-              child: Tooltip(
-                message: 'Gestionar contenido',
-                child: Material(
-                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                  shape: const CircleBorder(),
-                  elevation: 2,
-                  child: InkWell(
-                    customBorder: const CircleBorder(),
-                    onTap: _openMediaOperations,
-                    child: const SizedBox(
-                      width: 40,
-                      height: 40,
-                      child: Center(child: AppIcon(Symbols.inventory_2_rounded, size: 22)),
+          SafeArea(
+            bottom: false,
+            child: Align(
+              alignment: Alignment.topCenter,
+              child: Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Tooltip(
+                  message: 'Gestionar contenido',
+                  child: Material(
+                    color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                    shape: const CircleBorder(),
+                    elevation: 2,
+                    child: InkWell(
+                      customBorder: const CircleBorder(),
+                      onTap: _openMediaOperations,
+                      child: const SizedBox(
+                        width: 40,
+                        height: 40,
+                        child: Center(child: AppIcon(Symbols.inventory_2_rounded, size: 22)),
+                      ),
                     ),
                   ),
                 ),
