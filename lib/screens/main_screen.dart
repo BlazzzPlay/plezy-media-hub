@@ -66,6 +66,7 @@ import 'livetv/live_tv_screen.dart';
 import 'search_screen.dart';
 import 'downloads/downloads_screen.dart';
 import 'settings/settings_screen.dart';
+import 'manage/manage_screen.dart';
 import 'profile/profile_switch_screen.dart';
 import 'profile/profile_teardown.dart';
 import '../services/system_shelf_service.dart';
@@ -997,6 +998,7 @@ class _MainScreenState extends State<MainScreen>
           NavigationTabId.liveTv => LiveTvScreen(key: _screenKeys[tab.id]),
           NavigationTabId.search => SearchScreen(key: _screenKeys[tab.id]),
           NavigationTabId.downloads => DownloadsScreen(key: _screenKeys[tab.id]),
+          NavigationTabId.manage => ManageScreen(key: _screenKeys[tab.id]),
           NavigationTabId.settings => SettingsScreen(key: _screenKeys[tab.id]),
         },
     ];

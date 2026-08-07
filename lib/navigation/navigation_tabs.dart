@@ -6,7 +6,7 @@ import '../i18n/strings.g.dart';
 import '../utils/platform_detector.dart';
 
 /// Navigation tab identifiers
-enum NavigationTabId { discover, explore, libraries, liveTv, search, downloads, settings }
+enum NavigationTabId { discover, explore, libraries, liveTv, search, downloads, manage, settings }
 
 /// Represents a navigation tab with its configuration
 class NavigationTab {
@@ -66,6 +66,7 @@ String _getLiveTvLabel() => t.navigation.liveTv;
 String _getSearchLabel() => t.common.search;
 String _getDownloadsLabel() => t.navigation.downloads;
 String _getSettingsLabel() => t.common.settings;
+String _getManageLabel() => 'Gestionar';
 
 /// All navigation tabs in display order
 const allNavigationTabs = [
@@ -90,6 +91,7 @@ const allNavigationTabs = [
     icon: Symbols.download_rounded,
     getLabel: _getDownloadsLabel,
   ),
+  NavigationTab(id: NavigationTabId.manage, onlineOnly: false, icon: Symbols.inventory_2_rounded, getLabel: _getManageLabel),
   NavigationTab(
     id: NavigationTabId.settings,
     onlineOnly: false,
