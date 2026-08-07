@@ -77,3 +77,20 @@ class WorkflowJob {
     lastError: json['last_error'] as String? ?? '',
   );
 }
+
+
+class DiskHealth {
+  final String path;
+  final double availableGb;
+  final double totalGb;
+  final double usedGb;
+
+  const DiskHealth({required this.path, required this.availableGb, required this.totalGb, required this.usedGb});
+
+  factory DiskHealth.fromJson(Map<String, dynamic> json) => DiskHealth(
+    path: json['path'] as String? ?? '',
+    availableGb: (json['available_gb'] as num?)?.toDouble() ?? 0,
+    totalGb: (json['total_gb'] as num?)?.toDouble() ?? 0,
+    usedGb: (json['used_gb'] as num?)?.toDouble() ?? 0,
+  );
+}

@@ -29,6 +29,8 @@ class _ManageScreenState extends State<ManageScreen> {
   List<IdentityCandidate> _historyCandidates = const [];
   List<ReorganizationPlan> _plans = const [];
   List<WorkflowJob> _jobs = const [];
+  DiskHealth? _diskHealth;
+  bool _orchestratorConnected = false;
 
   String get _profileId => context.read<ActiveProfileProvider>().active?.id ?? 'local-admin';
 
@@ -86,6 +88,7 @@ class _ManageScreenState extends State<ManageScreen> {
         client.listCandidates(),
         client.listPlans(),
         client.listJobs(),
+        client.getDiskHealth(),
       ]);
       if (!mounted) return;
       final allCandidates = results[1] as List<IdentityCandidate>;
@@ -96,9 +99,14 @@ class _ManageScreenState extends State<ManageScreen> {
             .toList();
         _plans = results[2] as List<ReorganizationPlan>;
         _jobs = results[3] as List<WorkflowJob>;
+        _diskHealth = results[4] as DiskHealth;
+        _orchestratorConnected = true;
       });
     } catch (error) {
-      if (mounted) setState(() => _error = error.toString());
+      if (mounted) setState(() {
+        _error = error.toString();
+        _orchestratorConnected = false;
+      });
     } finally {
       client.dispose();
       if (mounted) setState(() => _loading = false);
@@ -151,7 +159,7 @@ class _ManageScreenState extends State<ManageScreen> {
       groups.putIfAbsent(candidate.inventoryFileId, () => []).add(candidate);
     }
     return DefaultTabController(
-      length: 4,
+      length: 6,
       child: Scaffold(
         appBar: AppBar(
           title: const Text('Gestionar biblioteca'),
@@ -164,10 +172,12 @@ class _ManageScreenState extends State<ManageScreen> {
             const TabBar(
               isScrollable: true,
               tabs: [
+                Tab(text: 'Resumen'),
                 Tab(text: 'Identificar'),
                 Tab(text: 'Planes'),
                 Tab(text: 'Cola'),
                 Tab(text: 'Historial'),
+                Tab(text: 'Salud'),
               ],
             ),
             Expanded(
@@ -175,13 +185,81 @@ class _ManageScreenState extends State<ManageScreen> {
                   ? const Center(child: CircularProgressIndicator())
                   : _error != null
                   ? _messageCard(icon: Symbols.cloud_off_rounded, title: 'No se pudo cargar', body: _error!)
-                  : TabBarView(children: [_reviewView(groups), _plansView(), _queueView(), _historyView()]),
+                  : TabBarView(children: [_summaryView(groups), _reviewView(groups), _plansView(), _queueView(), _historyView(), _healthView()]),
             ),
           ],
         ),
       ),
     );
   }
+
+  Widget _summaryView(Map<int, List<IdentityCandidate>> groups) {
+    final activeJobs = _jobs.where((job) => job.status == 'pending' || job.status == 'running').length;
+    final planned = _plans.where((plan) => plan.action == 'planned').length;
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        Text('Resumen operativo', style: Theme.of(context).textTheme.titleLarge),
+        const SizedBox(height: 12),
+        _metricCard(Symbols.manage_search_rounded, 'Identidades', '${groups.length} archivos pendientes'),
+        _metricCard(Symbols.rule_rounded, 'Planes', '$planned por revisar'),
+        _metricCard(Symbols.sync_rounded, 'Procesos', '$activeJobs en cola o ejecución'),
+        _metricCard(
+          _orchestratorConnected ? Symbols.check_circle_rounded : Symbols.error_rounded,
+          'Orquestador',
+          _orchestratorConnected ? 'NUC conectado y base disponible' : 'Sin conexión',
+        ),
+      ],
+    );
+  }
+
+  Widget _healthView() {
+    final disk = _diskHealth;
+    if (!_orchestratorConnected || disk == null) {
+      return _messageCard(
+        icon: Symbols.cloud_off_rounded,
+        title: 'NUC sin conexión',
+        body: 'Guardá la conexión y verificá Tailscale para consultar la salud del Orquestador.',
+      );
+    }
+    final usedPercent = disk.totalGb <= 0 ? 0.0 : disk.usedGb / disk.totalGb;
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        Text('Salud del NUC', style: Theme.of(context).textTheme.titleLarge),
+        const SizedBox(height: 12),
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: AppIcon(Symbols.check_circle_rounded),
+                  title: Text('API y PostgreSQL operativos'),
+                  subtitle: Text('Conexión validada desde la app'),
+                ),
+                Text('Espacio de trabajo: ${disk.path}'),
+                const SizedBox(height: 8),
+                LinearProgressIndicator(value: usedPercent.clamp(0.0, 1.0)),
+                const SizedBox(height: 8),
+                Text('${disk.availableGb.toStringAsFixed(1)} GB libres de ${disk.totalGb.toStringAsFixed(1)} GB'),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _metricCard(IconData icon, String title, String value) => Card(
+    child: ListTile(
+      leading: AppIcon(icon),
+      title: Text(title),
+      subtitle: Text(value),
+    ),
+  );
 
   Widget _reviewView(Map<int, List<IdentityCandidate>> groups) {
     if (groups.isEmpty) {

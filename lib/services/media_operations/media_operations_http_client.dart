@@ -36,6 +36,11 @@ class MediaOperationsHttpClient {
     return _items(response).map(WorkflowJob.fromJson).toList();
   }
 
+  Future<DiskHealth> getDiskHealth() async {
+    final response = await _send('GET', '/api/v1/monitor/disk');
+    return DiskHealth.fromJson(jsonDecode(response.body) as Map<String, dynamic>);
+  }
+
   Future<void> approve(int candidateId) async => _send('POST', '/api/v1/candidates/$candidateId/approve');
   Future<void> reject(int candidateId) async => _send('POST', '/api/v1/candidates/$candidateId/reject');
 
