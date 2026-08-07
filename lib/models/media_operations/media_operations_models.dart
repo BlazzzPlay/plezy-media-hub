@@ -65,8 +65,9 @@ class WorkflowJob {
   final int attempts;
   final int maxAttempts;
   final String lastError;
+  final String fileName;
 
-  const WorkflowJob({required this.id, required this.type, required this.status, required this.attempts, required this.maxAttempts, required this.lastError});
+  const WorkflowJob({required this.id, required this.type, required this.status, required this.attempts, required this.maxAttempts, required this.lastError, required this.fileName});
 
   factory WorkflowJob.fromJson(Map<String, dynamic> json) => WorkflowJob(
     id: (json['id'] as num?)?.toInt() ?? 0,
@@ -75,6 +76,7 @@ class WorkflowJob {
     attempts: (json['attempts'] as num?)?.toInt() ?? 0,
     maxAttempts: (json['max_attempts'] as num?)?.toInt() ?? 1,
     lastError: json['last_error'] as String? ?? '',
+    fileName: ((json['payload'] as Map<String, dynamic>?)?['file_name'] as String?) ?? ((json['checkpoint'] as Map<String, dynamic>?)?['target'] as String? ?? '').split(RegExp(r'[\\/]')).last,
   );
 }
 

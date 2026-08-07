@@ -374,8 +374,8 @@ class _ManageScreenState extends State<ManageScreen> {
           Card(
             child: ListTile(
               leading: AppIcon(job.status == 'running' ? Symbols.sync_rounded : Symbols.schedule_rounded),
-              title: Text(job.type),
-              subtitle: Text('${job.status} · intento ${job.attempts}/${job.maxAttempts}'),
+              title: Text(job.fileName.isEmpty ? job.type : job.fileName, maxLines: 2, overflow: TextOverflow.ellipsis),
+              subtitle: Text('${job.type} · ${job.status} · intento ${job.attempts}/${job.maxAttempts}'),
             ),
           ),
       ],
