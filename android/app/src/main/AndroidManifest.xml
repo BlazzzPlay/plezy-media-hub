@@ -11,6 +11,8 @@
 
     <!-- Internet access permissions -->
     <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- Required to hand the downloaded, signed APK to Android's package installer. -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS"/>
 
 
@@ -137,6 +139,10 @@
         <intent>
             <action android:name="android.intent.action.VIEW" />
             <data android:scheme="http" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:mimeType="application/vnd.android.package-archive" />
         </intent>
         <!-- Required to resolve external video player apps on Android 11+ -->
         <intent>

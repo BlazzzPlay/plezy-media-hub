@@ -7,6 +7,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.res.Configuration
+import android.net.Uri
 import android.media.AudioManager
 import android.os.Build
 import android.os.Bundle
@@ -22,6 +23,7 @@ import android.view.WindowManager
 import android.view.inputmethod.InputMethodManager
 import android.widget.FrameLayout
 import androidx.annotation.RequiresApi
+import androidx.core.content.FileProvider
 import cl.blazz.plezy.car.CarRestrictionsMonitor
 import cl.blazz.plezy.exoplayer.ExoPlayerPlugin
 import cl.blazz.plezy.mpv.MpvAudioPlayerPlugin
@@ -75,6 +77,7 @@ class MainActivity : FlutterActivity() {
   private val DEVICE_ADJUSTMENT_CHANNEL = "com.plezy/device_adjustment"
   private val TEXT_INPUT_CHANNEL = "com.plezy/text_input"
   private val APP_EXIT_CHANNEL = "com.plezy/app_exit"
+  private val APK_INSTALLER_CHANNEL = "com.plezy/apk_installer"
   private val CAR_RESTRICTIONS_CHANNEL = "com.plezy/car_restrictions"
   private var watchNextPlugin: WatchNextPlugin? = null
   private var carRestrictions: CarRestrictionsMonitor? = null
@@ -678,6 +681,36 @@ class MainActivity : FlutterActivity() {
           result.success(true)
           window.decorView.post {
             finishAndRemoveTask()
+          }
+        }
+        else -> result.notImplemented()
+      }
+    }
+
+    MethodChannel(flutterEngine.dartExecutor.binaryMessenger, APK_INSTALLER_CHANNEL).setMethodCallHandler { call, result ->
+      when (call.method) {
+        "installApk" -> {
+          val apkPath = call.arguments as? String
+          val apk = apkPath?.let(::java.io.File)
+          if (apk == null || !apk.isFile) {
+            result.error("APK_NOT_FOUND", "No se encontró el APK descargado.", null)
+          } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && !packageManager.canRequestPackageInstalls()) {
+            startActivity(
+              Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES).apply {
+                data = Uri.parse("package:$packageName")
+              }
+            )
+            result.success(mapOf("started" to false, "requiresPermission" to true))
+          } else {
+            val apkUri = FileProvider.getUriForFile(this, "$packageName.fileprovider", apk)
+            startActivity(
+              Intent(Intent.ACTION_VIEW).apply {
+                setDataAndType(apkUri, "application/vnd.android.package-archive")
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+              }
+            )
+            result.success(mapOf("started" to true, "requiresPermission" to false))
           }
         }
         else -> result.notImplemented()

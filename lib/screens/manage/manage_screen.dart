@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:provider/provider.dart';
@@ -23,6 +25,9 @@ class _ManageScreenState extends State<ManageScreen> {
   bool _loading = true;
   bool _saving = false;
   bool _checkingUpdate = false;
+  bool _downloadingUpdate = false;
+  double? _updateProgress;
+  File? _downloadedApk;
   bool _connectionExpanded = false;
   bool _hasSavedConnection = false;
   String? _error;
@@ -144,6 +149,36 @@ class _ManageScreenState extends State<ManageScreen> {
       if (mounted) setState(() => _update = update);
     } finally {
       if (mounted) setState(() => _checkingUpdate = false);
+    }
+  }
+
+  Future<void> _downloadAndInstallUpdate() async {
+    final update = _update;
+    if (update == null) return;
+    setState(() {
+      _downloadingUpdate = true;
+      _updateProgress = 0;
+    });
+    try {
+      final apk = _downloadedApk ?? await MediaUpdateService.downloadApk(
+        update,
+        onProgress: (received, total) {
+          if (mounted) setState(() => _updateProgress = total > 0 ? received / total : null);
+        },
+      );
+      if (!mounted) return;
+      setState(() => _downloadedApk = apk);
+      final install = await MediaUpdateService.installApk(apk);
+      if (!mounted) return;
+      if (install.requiresPermission) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Permití instalar desde Plezy y luego tocá Instalar nuevamente.')),
+        );
+      }
+    } catch (error) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('No se pudo actualizar: $error')));
+    } finally {
+      if (mounted) setState(() => _downloadingUpdate = false);
     }
   }
 
@@ -327,17 +362,44 @@ class _ManageScreenState extends State<ManageScreen> {
 
   Widget _updateCard() => Card(
     margin: const EdgeInsets.fromLTRB(12, 4, 12, 2),
-    child: SizedBox(
+    child: _update == null ? SizedBox(
       height: 48,
       child: ListTile(
         dense: true,
         leading: const AppIcon(Symbols.system_update_rounded),
-        title: Text(_update == null ? 'Actualizaciones' : 'Nueva versión: ${_update!.version}', maxLines: 1, overflow: TextOverflow.ellipsis),
+        title: const Text('Actualizaciones'),
         trailing: IconButton(
           tooltip: 'Buscar actualización',
           onPressed: _checkingUpdate ? null : _checkForUpdate,
           icon: _checkingUpdate ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const AppIcon(Symbols.refresh_rounded),
         ),
+      ),
+    ) : Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      child: Column(
+        children: [
+          Row(children: [
+            const AppIcon(Symbols.system_update_rounded),
+            const SizedBox(width: 12),
+            Expanded(child: Text('Nueva versión: ${_update!.version}', maxLines: 1, overflow: TextOverflow.ellipsis)),
+            IconButton(tooltip: 'Buscar actualización', onPressed: _checkingUpdate ? null : _checkForUpdate, icon: const AppIcon(Symbols.refresh_rounded)),
+          ]),
+          if (_downloadingUpdate) ...[
+            const SizedBox(height: 6),
+            LinearProgressIndicator(value: _updateProgress),
+            const SizedBox(height: 6),
+          ],
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              onPressed: _downloadingUpdate ? null : _downloadAndInstallUpdate,
+              icon: _downloadingUpdate
+                  ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                  : AppIcon(_downloadedApk == null ? Symbols.download_rounded : Symbols.install_mobile_rounded),
+              label: Text(_downloadingUpdate ? 'Descargando…' : _downloadedApk == null ? 'Descargar e instalar' : 'Instalar actualización'),
+            ),
+          ),
+        ],
       ),
     ),
   );
