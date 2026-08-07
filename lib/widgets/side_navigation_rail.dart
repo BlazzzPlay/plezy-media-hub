@@ -198,7 +198,6 @@ class SideNavigationRail extends StatefulWidget {
   final NavigationTabId selectedTab;
   final String? selectedLibraryKey;
   final bool isOfflineMode;
-  final bool hasMediaOperations;
   final bool isSidebarFocused;
   final bool alwaysExpanded;
   final bool isReconnecting;
@@ -219,7 +218,6 @@ class SideNavigationRail extends StatefulWidget {
     required this.selectedTab,
     this.selectedLibraryKey,
     this.isOfflineMode = false,
-    this.hasMediaOperations = false,
     this.isSidebarFocused = false,
     this.alwaysExpanded = false,
     this.isReconnecting = false,
@@ -272,7 +270,6 @@ class SideNavigationRailState extends State<SideNavigationRail> with MountedSetS
   static const _kLibraries = 'libraries';
   static const _kSearch = 'search';
   static const _kDownloads = 'downloads';
-  static const _kManage = 'manage';
   static const _kSettings = 'settings';
   static const _kReconnect = 'reconnect';
   static const _kFullscreen = 'fullscreen';
@@ -421,8 +418,6 @@ class SideNavigationRailState extends State<SideNavigationRail> with MountedSetS
         return _kSearch;
       case NavigationTabId.downloads:
         return _showDownloads ? _kDownloads : null;
-      case NavigationTabId.manage:
-        return widget.hasMediaOperations ? _kManage : null;
       case NavigationTabId.settings:
         return _kSettings;
       case NavigationTabId.liveTv:
@@ -467,7 +462,6 @@ class SideNavigationRailState extends State<SideNavigationRail> with MountedSetS
       if (hasExplore) _kExplore,
       _kSearch,
       if (_showDownloads) _kDownloads,
-      if (widget.hasMediaOperations) _kManage,
       _kSettings,
       _kReconnect,
       if (hasHiddenLibraries) _kHiddenLibraries,
@@ -560,7 +554,6 @@ class SideNavigationRailState extends State<SideNavigationRail> with MountedSetS
         _kSearch,
       ],
       if (_showDownloads) _kDownloads,
-      if (widget.hasMediaOperations) _kManage,
       _kSettings,
       if (_showFullscreenToggle) _kFullscreen,
     ];
@@ -832,15 +825,6 @@ class SideNavigationRailState extends State<SideNavigationRail> with MountedSetS
                                     ),
                                     const SizedBox(height: 8),
                                   ],
-                                  if (widget.hasMediaOperations) _buildNavItem(
-                                    icon: Symbols.inventory_2_rounded,
-                                    selectedIcon: Symbols.inventory_2_rounded,
-                                    label: 'Gestionar',
-                                    isSelected: widget.selectedTab == NavigationTabId.manage,
-                                    onTap: () => widget.onDestinationSelected(NavigationTabId.manage),
-                                    focusNode: _focusTracker.get(_kManage),
-                                    isCollapsed: isCollapsed,
-                                  ),
                                   const SizedBox(height: 8),
                                   _buildNavItem(
                                     icon: Symbols.settings_rounded,

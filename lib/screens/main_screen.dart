@@ -136,15 +136,9 @@ List<NavigationTab> mainScreenBottomNavigationTabs({
   }).toList();
 }
 
-/// Five labeled destinations no longer fit reliably on compact phone widths.
-/// Keep every destination reachable while switching to the compact icon layout.
+/// The custom media workflow is available only on the private network.
 @visibleForTesting
-bool shouldHideBottomNavigationLabels({
-  required bool configuredToShowLabels,
-  required int destinationCount,
-}) {
-  return !configuredToShowLabels || destinationCount >= 5;
-}
+bool shouldShowMediaOperationsShortcut({required bool orchestratorReachable}) => orchestratorReachable;
 
 @visibleForTesting
 bool shouldPassTvosMenuToSystem({
@@ -988,21 +982,54 @@ class _MainScreenState extends State<MainScreen>
   /// IndexedStack that disables tickers for offscreen children to prevent
   /// animation controllers on non-visible tabs from scheduling frames.
   Widget _buildTickerAwareStack() {
-    return Column(
+    return Stack(
       children: [
-        const AuthErrorBanner(),
-        Expanded(
-          child: IndexedStack(
-            index: _currentIndex,
-            clipBehavior: Clip.none,
-            children: [
-              for (var i = 0; i < _screens.length; i++) TickerMode(enabled: i == _currentIndex, child: _screens[i]),
-            ],
-          ),
+        Column(
+          children: [
+            const AuthErrorBanner(),
+            Expanded(
+              child: IndexedStack(
+                index: _currentIndex,
+                clipBehavior: Clip.none,
+                children: [
+                  for (var i = 0; i < _screens.length; i++) TickerMode(enabled: i == _currentIndex, child: _screens[i]),
+                ],
+              ),
+            ),
+          ],
         ),
+        if (shouldShowMediaOperationsShortcut(orchestratorReachable: _hasMediaOperations))
+          PositionedDirectional(
+            top: 8,
+            end: 72,
+            child: SafeArea(
+              bottom: false,
+              child: Tooltip(
+                message: 'Gestionar contenido',
+                child: Material(
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                  shape: const CircleBorder(),
+                  elevation: 2,
+                  child: InkWell(
+                    customBorder: const CircleBorder(),
+                    onTap: _openMediaOperations,
+                    child: const SizedBox(
+                      width: 40,
+                      height: 40,
+                      child: Center(child: AppIcon(Symbols.inventory_2_rounded, size: 22)),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
       ],
     );
   }
+
+  Future<void> _openMediaOperations() => Navigator.of(context).push(
+    MaterialPageRoute<void>(builder: (_) => const ManageScreen()),
+  );
 
   List<Widget> _buildScreens(bool offline) {
     return [
@@ -1018,7 +1045,6 @@ class _MainScreenState extends State<MainScreen>
           NavigationTabId.liveTv => LiveTvScreen(key: _screenKeys[tab.id]),
           NavigationTabId.search => SearchScreen(key: _screenKeys[tab.id]),
           NavigationTabId.downloads => DownloadsScreen(key: _screenKeys[tab.id]),
-          NavigationTabId.manage => ManageScreen(key: _screenKeys[tab.id]),
           NavigationTabId.settings => SettingsScreen(key: _screenKeys[tab.id]),
         },
     ];
@@ -1659,7 +1685,7 @@ class _MainScreenState extends State<MainScreen>
     });
   }
   List<NavigationTab> _getVisibleTabs(bool isOffline) {
-    return NavigationTab.getVisibleTabs(isOffline: isOffline, hasLiveTv: _hasLiveTv, hasExplore: _lastHasExplore, hasMediaOperations: _hasMediaOperations);
+    return NavigationTab.getVisibleTabs(isOffline: isOffline, hasLiveTv: _hasLiveTv, hasExplore: _lastHasExplore);
   }
 
   List<NavigationTab> _getBottomNavigationTabs(BuildContext context) {
@@ -1859,7 +1885,6 @@ class _MainScreenState extends State<MainScreen>
                                     selectedTab: _currentTab,
                                     selectedLibraryKey: _selectedLibraryGlobalKey,
                                     isOfflineMode: _isOffline,
-                                  hasMediaOperations: _hasMediaOperations,
                                     isSidebarFocused: _isSidebarFocused,
                                     alwaysExpanded: alwaysExpanded,
                                     isReconnecting: _isReconnecting,
@@ -1952,10 +1977,7 @@ class _MainScreenState extends State<MainScreen>
               SettingValueBuilder<bool>(
                 pref: SettingsService.showNavBarLabels,
                 builder: (context, showNavBarLabels, _) {
-                  final hideLabels = shouldHideBottomNavigationLabels(
-                    configuredToShowLabels: showNavBarLabels,
-                    destinationCount: _getBottomNavigationTabs(context).length,
-                  );
+                  final hideLabels = !showNavBarLabels;
                   // Re-measure whenever the bar's composition can change:
                   // this builder reruns on label toggles AND on every
                   // MainScreen rebuild (offline bar appearing/disappearing).

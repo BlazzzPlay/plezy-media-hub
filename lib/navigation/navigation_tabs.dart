@@ -6,7 +6,7 @@ import '../i18n/strings.g.dart';
 import '../utils/platform_detector.dart';
 
 /// Navigation tab identifiers
-enum NavigationTabId { discover, explore, libraries, liveTv, search, downloads, manage, settings }
+enum NavigationTabId { discover, explore, libraries, liveTv, search, downloads, settings }
 
 /// Represents a navigation tab with its configuration
 class NavigationTab {
@@ -26,14 +26,12 @@ class NavigationTab {
     required bool isOffline,
     bool hasLiveTv = false,
     bool hasExplore = false,
-    bool hasMediaOperations = false,
   }) {
     return allNavigationTabs.where((tab) {
       if (isOffline && tab.onlineOnly) return false;
       if (tab.id == NavigationTabId.liveTv && !hasLiveTv) return false;
       if (tab.id == NavigationTabId.explore && !hasExplore) return false;
       if (tab.id == NavigationTabId.downloads && PlatformDetector.isAppleTV()) return false;
-      if (tab.id == NavigationTabId.manage && !hasMediaOperations) return false;
       return true;
     }).toList();
   }
@@ -68,7 +66,6 @@ String _getLiveTvLabel() => t.navigation.liveTv;
 String _getSearchLabel() => t.common.search;
 String _getDownloadsLabel() => t.navigation.downloads;
 String _getSettingsLabel() => t.common.settings;
-String _getManageLabel() => 'Gestionar';
 
 /// All navigation tabs in display order
 const allNavigationTabs = [
@@ -93,7 +90,6 @@ const allNavigationTabs = [
     icon: Symbols.download_rounded,
     getLabel: _getDownloadsLabel,
   ),
-  NavigationTab(id: NavigationTabId.manage, onlineOnly: false, icon: Symbols.inventory_2_rounded, getLabel: _getManageLabel),
   NavigationTab(
     id: NavigationTabId.settings,
     onlineOnly: false,
