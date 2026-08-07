@@ -23,6 +23,8 @@ class _ManageScreenState extends State<ManageScreen> {
   bool _loading = true;
   bool _saving = false;
   bool _checkingUpdate = false;
+  bool _connectionExpanded = false;
+  bool _hasSavedConnection = false;
   String? _error;
   MediaHubUpdate? _update;
   List<IdentityCandidate> _candidates = const [];
@@ -64,6 +66,7 @@ class _ManageScreenState extends State<ManageScreen> {
     }
     _url.text = session.baseUrl;
     _key.text = session.apiKey;
+    setState(() => _hasSavedConnection = true);
     await _refresh(session: session);
   }
 
@@ -122,6 +125,10 @@ class _ManageScreenState extends State<ManageScreen> {
     setState(() => _saving = true);
     try {
       await _store.save(_profileId, session);
+      if (mounted) setState(() {
+        _hasSavedConnection = true;
+        _connectionExpanded = false;
+      });
       await _refresh(session: session);
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -167,11 +174,14 @@ class _ManageScreenState extends State<ManageScreen> {
       child: Scaffold(
         appBar: AppBar(
           title: const Text('Gestionar biblioteca'),
-          actions: [IconButton(onPressed: _loading ? null : _refresh, icon: const AppIcon(Symbols.refresh_rounded))],
+          actions: [
+            IconButton(tooltip: 'Configuración del Orquestador', onPressed: () => setState(() => _connectionExpanded = !_connectionExpanded), icon: const AppIcon(Symbols.settings_rounded)),
+            IconButton(onPressed: _loading ? null : _refresh, icon: const AppIcon(Symbols.refresh_rounded)),
+          ],
         ),
         body: Column(
           children: [
-            _connectionCard(),
+            if (!_hasSavedConnection || _connectionExpanded) _connectionCard(),
             _updateCard(),
             const TabBar(
               isScrollable: true,
@@ -314,16 +324,18 @@ class _ManageScreenState extends State<ManageScreen> {
   );
 
   Widget _updateCard() => Card(
-    child: ListTile(
-      leading: const AppIcon(Symbols.system_update_rounded),
-      title: Text(_update == null ? 'Actualizaciones' : 'Actualización disponible: ${_update!.version}'),
-      subtitle: Text(_update == null ? 'La app está actualizada o no hay una versión publicada.' : _update!.fileName),
-      trailing: IconButton(
-        tooltip: 'Buscar actualización',
-        onPressed: _checkingUpdate ? null : _checkForUpdate,
-        icon: _checkingUpdate
-            ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-            : const AppIcon(Symbols.refresh_rounded),
+    margin: const EdgeInsets.fromLTRB(12, 4, 12, 2),
+    child: SizedBox(
+      height: 48,
+      child: ListTile(
+        dense: true,
+        leading: const AppIcon(Symbols.system_update_rounded),
+        title: Text(_update == null ? 'Actualizaciones' : 'Nueva versión: ${_update!.version}', maxLines: 1, overflow: TextOverflow.ellipsis),
+        trailing: IconButton(
+          tooltip: 'Buscar actualización',
+          onPressed: _checkingUpdate ? null : _checkForUpdate,
+          icon: _checkingUpdate ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const AppIcon(Symbols.refresh_rounded),
+        ),
       ),
     ),
   );
