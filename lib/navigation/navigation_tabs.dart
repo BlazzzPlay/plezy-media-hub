@@ -26,12 +26,14 @@ class NavigationTab {
     required bool isOffline,
     bool hasLiveTv = false,
     bool hasExplore = false,
+    bool hasMediaOperations = false,
   }) {
     return allNavigationTabs.where((tab) {
       if (isOffline && tab.onlineOnly) return false;
       if (tab.id == NavigationTabId.liveTv && !hasLiveTv) return false;
       if (tab.id == NavigationTabId.explore && !hasExplore) return false;
       if (tab.id == NavigationTabId.downloads && PlatformDetector.isAppleTV()) return false;
+      if (tab.id == NavigationTabId.manage && !hasMediaOperations) return false;
       return true;
     }).toList();
   }

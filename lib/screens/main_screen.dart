@@ -17,6 +17,9 @@ import '../i18n/strings.g.dart';
 import '../services/app_exit_service.dart';
 import '../services/tvos_system_navigation_service.dart';
 import '../services/update_service.dart';
+import '../models/media_operations/media_operations_models.dart';
+import '../services/media_operations/media_operations_http_client.dart';
+import '../services/media_operations/media_operations_session_store.dart';
 import '../utils/app_logger.dart';
 import '../widgets/auth_error_banner.dart';
 import '../widgets/app_icon.dart';
@@ -206,7 +209,7 @@ ProfileInvalidationAction profileInvalidationAction({
 class MainScreen extends StatefulWidget {
   final bool isOfflineMode;
 
-  /// When `true`, the previous screen (typically [SetupScreen]) already
+  /// When 	rue`, the previous screen (typically [SetupScreen]) already
   /// resolved the launch profile prompt — skip the postFrame prompt that
   /// would otherwise re-fire it.
   final bool initialPromptHandled;
@@ -313,6 +316,11 @@ class _MainScreenState extends State<MainScreen>
   VoidCallback? _bindingSettleListener;
   bool _startupServicesPrimed = false;
   Timer? _startupSettleTimeout;
+  final _mediaOperationsStore = MediaOperationsSessionStore();
+  Timer? _mediaOperationsProbeTimer;
+  bool _hasMediaOperations = false;
+  String? _mediaOperationsProfileId;
+  static const _defaultOrchestratorUrl = 'http://100.87.101.20:8100';
 
   /// Hard ceiling on how long we wait for [ActiveProfileBinder] to settle
   /// before priming the UI anyway. The binder always calls
@@ -333,6 +341,7 @@ class _MainScreenState extends State<MainScreen>
     _offlineUntilConnected = widget.isOfflineMode;
 
     WidgetsBinding.instance.addObserver(this);
+    _mediaOperationsProbeTimer = Timer.periodic(const Duration(seconds: 20), (_) => _refreshMediaOperationsAvailability());
     _contentFocusScope.addListener(_syncSidebarFocusWithContent);
 
     if (PlatformDetector.isDesktopOS()) {
@@ -894,6 +903,7 @@ class _MainScreenState extends State<MainScreen>
     _activeProfileForListener?.removeListener(_onActiveProfileChanged);
     _serverStatusSub?.cancel();
     _startupSettleTimeout?.cancel();
+    _mediaOperationsProbeTimer?.cancel();
     _startupSettleTimeout = null;
     _sidebarFocusScope.dispose();
     _contentFocusScope.removeListener(_syncSidebarFocusWithContent);
@@ -1616,8 +1626,30 @@ class _MainScreenState extends State<MainScreen>
   bool get _hasLiveTv => _lastHasLiveTv;
 
   /// Get navigation tabs filtered by offline mode
+  Future<void> _refreshMediaOperationsAvailability() async {
+    final profileId = context.read<ActiveProfileProvider>().active?.id ?? 'local-admin';
+    final stored = await _mediaOperationsStore.load(profileId);
+    final session = stored ?? const MediaOperationsSession(baseUrl: _defaultOrchestratorUrl, apiKey: '');
+    final client = MediaOperationsHttpClient(session);
+    var available = false;
+    try {
+      await client.checkHealth();
+      available = true;
+    } catch (_) {
+      available = false;
+    } finally {
+      client.dispose();
+    }
+    if (!mounted || (available == _hasMediaOperations && profileId == _mediaOperationsProfileId)) return;
+    setState(() {
+      _hasMediaOperations = available;
+      _mediaOperationsProfileId = profileId;
+      _currentTab = _normalizeTabForMode(_currentTab, _isOffline);
+      _screens = _buildScreens(_isOffline);
+    });
+  }
   List<NavigationTab> _getVisibleTabs(bool isOffline) {
-    return NavigationTab.getVisibleTabs(isOffline: isOffline, hasLiveTv: _hasLiveTv, hasExplore: _lastHasExplore);
+    return NavigationTab.getVisibleTabs(isOffline: isOffline, hasLiveTv: _hasLiveTv, hasExplore: _lastHasExplore, hasMediaOperations: _hasMediaOperations);
   }
 
   List<NavigationTab> _getBottomNavigationTabs(BuildContext context) {
@@ -1817,6 +1849,7 @@ class _MainScreenState extends State<MainScreen>
                                     selectedTab: _currentTab,
                                     selectedLibraryKey: _selectedLibraryGlobalKey,
                                     isOfflineMode: _isOffline,
+                                  hasMediaOperations: _hasMediaOperations,
                                     isSidebarFocused: _isSidebarFocused,
                                     alwaysExpanded: alwaysExpanded,
                                     isReconnecting: _isReconnecting,

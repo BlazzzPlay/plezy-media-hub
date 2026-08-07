@@ -17,6 +17,7 @@ class _ManageScreenState extends State<ManageScreen> {
   final _store = MediaOperationsSessionStore();
   final _url = TextEditingController();
   final _key = TextEditingController();
+  static const _defaultOrchestratorUrl = 'http://100.87.101.20:8100';
   bool _loading = true;
   bool _saving = false;
   String? _error;
@@ -31,7 +32,11 @@ class _ManageScreenState extends State<ManageScreen> {
     setState(() { _loading = true; _error = null; });
     final session = await _store.load(_profileId);
     if (!mounted) return;
-    if (session == null) { setState(() => _loading = false); return; }
+    if (session == null) {
+      _url.text = _defaultOrchestratorUrl;
+      setState(() => _loading = false);
+      return;
+    }
     _url.text = session.baseUrl;
     _key.text = session.apiKey;
     await _refresh(session: session);
