@@ -11,7 +11,8 @@ import '../../widgets/app_icon.dart';
 
 class ManageScreen extends StatefulWidget {
   const ManageScreen({super.key});
-  @override State<ManageScreen> createState() => _ManageScreenState();
+  @override
+  State<ManageScreen> createState() => _ManageScreenState();
 }
 
 class _ManageScreenState extends State<ManageScreen> {
@@ -31,11 +32,27 @@ class _ManageScreenState extends State<ManageScreen> {
 
   String get _profileId => context.read<ActiveProfileProvider>().active?.id ?? 'local-admin';
 
-  @override void initState() { super.initState(); WidgetsBinding.instance.addPostFrameCallback((_) { _load(); _checkForUpdate(); }); }
-  @override void dispose() { _url.dispose(); _key.dispose(); super.dispose(); }
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _load();
+      _checkForUpdate();
+    });
+  }
+
+  @override
+  void dispose() {
+    _url.dispose();
+    _key.dispose();
+    super.dispose();
+  }
 
   Future<void> _load() async {
-    setState(() { _loading = true; _error = null; });
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
     final session = await _store.load(_profileId);
     if (!mounted) return;
     if (session == null) {
@@ -50,8 +67,17 @@ class _ManageScreenState extends State<ManageScreen> {
 
   Future<void> _refresh({MediaOperationsSession? session}) async {
     final configured = session ?? MediaOperationsSession(baseUrl: _url.text.trim(), apiKey: _key.text.trim());
-    if (configured.baseUrl.isEmpty || configured.apiKey.isEmpty) { setState(() { _loading = false; _error = 'Configurá la URL y la clave del Orquestador.'; }); return; }
-    setState(() { _loading = true; _error = null; });
+    if (configured.baseUrl.isEmpty || configured.apiKey.isEmpty) {
+      setState(() {
+        _loading = false;
+        _error = 'Configurá la URL y la clave del Orquestador.';
+      });
+      return;
+    }
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
     final client = MediaOperationsHttpClient(configured);
     try {
       await client.checkHealth();
@@ -85,7 +111,9 @@ class _ManageScreenState extends State<ManageScreen> {
     try {
       await _store.save(_profileId, session);
       await _refresh(session: session);
-    } finally { if (mounted) setState(() => _saving = false); }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
   }
 
   Future<void> _checkForUpdate() async {
@@ -99,99 +127,282 @@ class _ManageScreenState extends State<ManageScreen> {
   }
 
   Future<void> _review(IdentityCandidate candidate, bool approved) async {
-    final client = MediaOperationsHttpClient(MediaOperationsSession(baseUrl: _url.text.trim(), apiKey: _key.text.trim()));
+    final client = MediaOperationsHttpClient(
+      MediaOperationsSession(baseUrl: _url.text.trim(), apiKey: _key.text.trim()),
+    );
     try {
-      if (approved) { await client.approve(candidate.id); } else { await client.reject(candidate.id); }
+      if (approved) {
+        await client.approve(candidate.id);
+      } else {
+        await client.reject(candidate.id);
+      }
       if (mounted) await _refresh();
     } catch (error) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.toString())));
-    } finally { client.dispose(); }
+    } finally {
+      client.dispose();
+    }
   }
 
-  @override Widget build(BuildContext context) {
+  @override
+  Widget build(BuildContext context) {
     final groups = <int, List<IdentityCandidate>>{};
-    for (final candidate in _candidates) { groups.putIfAbsent(candidate.inventoryFileId, () => []).add(candidate); }
+    for (final candidate in _candidates) {
+      groups.putIfAbsent(candidate.inventoryFileId, () => []).add(candidate);
+    }
     return DefaultTabController(
       length: 4,
       child: Scaffold(
-        appBar: AppBar(title: const Text('Gestionar biblioteca'), actions: [IconButton(onPressed: _loading ? null : _refresh, icon: const AppIcon(Symbols.refresh_rounded))]),
-        body: Column(children: [
-          _connectionCard(), _updateCard(),
-          const TabBar(isScrollable: true, tabs: [Tab(text: 'Identificar'), Tab(text: 'Planes'), Tab(text: 'Cola'), Tab(text: 'Historial')]),
-          Expanded(child: _loading
-            ? const Center(child: CircularProgressIndicator())
-            : _error != null
-              ? _messageCard(icon: Symbols.cloud_off_rounded, title: 'No se pudo cargar', body: _error!)
-              : TabBarView(children: [_reviewView(groups), _plansView(), _queueView(), _historyView()])),
-        ]),
+        appBar: AppBar(
+          title: const Text('Gestionar biblioteca'),
+          actions: [IconButton(onPressed: _loading ? null : _refresh, icon: const AppIcon(Symbols.refresh_rounded))],
+        ),
+        body: Column(
+          children: [
+            _connectionCard(),
+            _updateCard(),
+            const TabBar(
+              isScrollable: true,
+              tabs: [
+                Tab(text: 'Identificar'),
+                Tab(text: 'Planes'),
+                Tab(text: 'Cola'),
+                Tab(text: 'Historial'),
+              ],
+            ),
+            Expanded(
+              child: _loading
+                  ? const Center(child: CircularProgressIndicator())
+                  : _error != null
+                  ? _messageCard(icon: Symbols.cloud_off_rounded, title: 'No se pudo cargar', body: _error!)
+                  : TabBarView(children: [_reviewView(groups), _plansView(), _queueView(), _historyView()]),
+            ),
+          ],
+        ),
       ),
     );
   }
 
   Widget _reviewView(Map<int, List<IdentityCandidate>> groups) {
-    if (groups.isEmpty) return _messageCard(icon: Symbols.task_alt_rounded, title: 'Sin identidades pendientes', body: 'Las aprobaciones quedan en Historial. Antes de mover archivos se debe revisar un plan.');
-    return ListView(padding: const EdgeInsets.all(16), children: [
-      Text('${groups.length} archivos para revisar', style: Theme.of(context).textTheme.titleLarge), const SizedBox(height: 8),
-      for (final group in groups.values) _candidateGroup(group),
-    ]);
+    if (groups.isEmpty) {
+      return _messageCard(
+        icon: Symbols.task_alt_rounded,
+        title: 'Sin identidades pendientes',
+        body: 'Las aprobaciones quedan en Historial. Antes de mover archivos se debe revisar un plan.',
+      );
+    }
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        Text('${groups.length} archivos para revisar', style: Theme.of(context).textTheme.titleLarge),
+        const SizedBox(height: 8),
+        for (final group in groups.values) _candidateGroup(group),
+      ],
+    );
   }
 
-  Widget _connectionCard() => Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-    Text('Media Orchestrator', style: Theme.of(context).textTheme.titleMedium), const SizedBox(height: 8),
-    TextField(controller: _url, keyboardType: TextInputType.url, decoration: const InputDecoration(labelText: 'URL del NUC/NAS', hintText: 'http://100.x.x.x:8100')),
-    const SizedBox(height: 8), TextField(controller: _key, obscureText: true, decoration: const InputDecoration(labelText: 'Clave de acceso')),
-    const SizedBox(height: 12), FilledButton.icon(onPressed: _saving ? null : _saveAndConnect, icon: const AppIcon(Symbols.link_rounded), label: Text(_saving ? 'Guardando…' : 'Guardar y conectar')),
-  ])));
-
-  Widget _updateCard() => Card(child: ListTile(
-    leading: const AppIcon(Symbols.system_update_rounded),
-    title: Text(_update == null ? 'Actualizaciones' : 'Actualización disponible: ${_update!.version}'),
-    subtitle: Text(_update == null ? 'La app está actualizada o no hay una versión publicada.' : _update!.fileName),
-    trailing: IconButton(
-      tooltip: 'Buscar actualización',
-      onPressed: _checkingUpdate ? null : _checkForUpdate,
-      icon: _checkingUpdate ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)) : const AppIcon(Symbols.refresh_rounded),
+  Widget _connectionCard() => Card(
+    child: Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Media Orchestrator', style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 8),
+          TextField(
+            controller: _url,
+            keyboardType: TextInputType.url,
+            decoration: const InputDecoration(labelText: 'URL del NUC/NAS', hintText: 'http://100.x.x.x:8100'),
+          ),
+          const SizedBox(height: 8),
+          TextField(
+            controller: _key,
+            obscureText: true,
+            decoration: const InputDecoration(labelText: 'Clave de acceso'),
+          ),
+          const SizedBox(height: 12),
+          FilledButton.icon(
+            onPressed: _saving ? null : _saveAndConnect,
+            icon: const AppIcon(Symbols.link_rounded),
+            label: Text(_saving ? 'Guardando…' : 'Guardar y conectar'),
+          ),
+        ],
+      ),
     ),
-  ));
+  );
+
+  Widget _updateCard() => Card(
+    child: ListTile(
+      leading: const AppIcon(Symbols.system_update_rounded),
+      title: Text(_update == null ? 'Actualizaciones' : 'Actualización disponible: ${_update!.version}'),
+      subtitle: Text(_update == null ? 'La app está actualizada o no hay una versión publicada.' : _update!.fileName),
+      trailing: IconButton(
+        tooltip: 'Buscar actualización',
+        onPressed: _checkingUpdate ? null : _checkForUpdate,
+        icon: _checkingUpdate
+            ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+            : const AppIcon(Symbols.refresh_rounded),
+      ),
+    ),
+  );
 
   Widget _plansView() {
     final plans = _plans.where((plan) => plan.action == 'planned').toList();
-    if (plans.isEmpty) return _messageCard(icon: Symbols.rule_rounded, title: 'Sin planes pendientes', body: 'Los planes se revisan aquí antes de ejecutar cualquier movimiento.');
-    return ListView(padding: const EdgeInsets.all(16), children: [
-      Text('${plans.length} planes para revisar', style: Theme.of(context).textTheme.titleLarge),
-      for (final plan in plans) Card(child: ListTile(leading: const AppIcon(Symbols.drive_file_move_rounded), title: Text(plan.sourcePath), subtitle: Text('${plan.operation.toUpperCase()} → ${plan.targetPath}\n${plan.reason}', maxLines: 3, overflow: TextOverflow.ellipsis))),
-    ]);
+    if (plans.isEmpty) {
+      return _messageCard(
+        icon: Symbols.rule_rounded,
+        title: 'Sin planes pendientes',
+        body: 'Los planes se revisan aquí antes de ejecutar cualquier movimiento.',
+      );
+    }
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        Text('${plans.length} planes para revisar', style: Theme.of(context).textTheme.titleLarge),
+        for (final plan in plans)
+          Card(
+            child: ListTile(
+              leading: const AppIcon(Symbols.drive_file_move_rounded),
+              title: Text(plan.sourcePath),
+              subtitle: Text(
+                '${plan.operation.toUpperCase()} → ${plan.targetPath}\n${plan.reason}',
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ),
+      ],
+    );
   }
 
   Widget _queueView() {
     final active = _jobs.where((job) => job.status == 'pending' || job.status == 'running').toList();
-    if (active.isEmpty) return _messageCard(icon: Symbols.hourglass_empty_rounded, title: 'Cola vacía', body: 'No hay procesos ejecutándose. Los planes requieren confirmación explícita.');
-    return ListView(padding: const EdgeInsets.all(16), children: [
-      Text('${active.length} procesos activos', style: Theme.of(context).textTheme.titleLarge),
-      for (final job in active) Card(child: ListTile(leading: AppIcon(job.status == 'running' ? Symbols.sync_rounded : Symbols.schedule_rounded), title: Text(job.type), subtitle: Text('${job.status} · intento ${job.attempts}/${job.maxAttempts}'))),
-    ]);
+    if (active.isEmpty) {
+      return _messageCard(
+        icon: Symbols.hourglass_empty_rounded,
+        title: 'Cola vacía',
+        body: 'No hay procesos ejecutándose. Los planes requieren confirmación explícita.',
+      );
+    }
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        Text('${active.length} procesos activos', style: Theme.of(context).textTheme.titleLarge),
+        for (final job in active)
+          Card(
+            child: ListTile(
+              leading: AppIcon(job.status == 'running' ? Symbols.sync_rounded : Symbols.schedule_rounded),
+              title: Text(job.type),
+              subtitle: Text('${job.status} · intento ${job.attempts}/${job.maxAttempts}'),
+            ),
+          ),
+      ],
+    );
   }
 
   Widget _historyView() {
     final plans = _plans.where((plan) => plan.action != 'planned').toList();
     final jobs = _jobs.where((job) => job.status != 'pending' && job.status != 'running').toList();
-    if (_historyCandidates.isEmpty && plans.isEmpty && jobs.isEmpty) return _messageCard(icon: Symbols.history_rounded, title: 'Sin historial', body: 'Acá quedarán identidades, planes y procesos finalizados.');
-    return ListView(padding: const EdgeInsets.all(16), children: [
-      for (final candidate in _historyCandidates) Card(child: ListTile(leading: AppIcon(candidate.status == 'accepted' ? Symbols.check_circle_rounded : Symbols.cancel_rounded), title: Text(candidate.title), subtitle: Text(candidate.status))),
-      for (final plan in plans) Card(child: ListTile(leading: const AppIcon(Symbols.rule_rounded), title: Text(plan.action), subtitle: Text(plan.sourcePath))),
-      for (final job in jobs) Card(child: ListTile(leading: AppIcon(job.status == 'completed' ? Symbols.check_circle_rounded : Symbols.error_rounded), title: Text(job.type), subtitle: Text(job.lastError.isEmpty ? job.status : '${job.status} · ${job.lastError}'))),
-    ]);
+    if (_historyCandidates.isEmpty && plans.isEmpty && jobs.isEmpty) {
+      return _messageCard(
+        icon: Symbols.history_rounded,
+        title: 'Sin historial',
+        body: 'Acá quedarán identidades, planes y procesos finalizados.',
+      );
+    }
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        for (final candidate in _historyCandidates)
+          Card(
+            child: ListTile(
+              leading: AppIcon(candidate.status == 'accepted' ? Symbols.check_circle_rounded : Symbols.cancel_rounded),
+              title: Text(candidate.title),
+              subtitle: Text(candidate.status),
+            ),
+          ),
+        for (final plan in plans)
+          Card(
+            child: ListTile(
+              leading: const AppIcon(Symbols.rule_rounded),
+              title: Text(plan.action),
+              subtitle: Text(plan.sourcePath),
+            ),
+          ),
+        for (final job in jobs)
+          Card(
+            child: ListTile(
+              leading: AppIcon(job.status == 'completed' ? Symbols.check_circle_rounded : Symbols.error_rounded),
+              title: Text(job.type),
+              subtitle: Text(job.lastError.isEmpty ? job.status : '${job.status} · ${job.lastError}'),
+            ),
+          ),
+      ],
+    );
   }
 
   Widget _candidateGroup(List<IdentityCandidate> items) {
     final first = items.first;
-    return Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text(first.path.split(RegExp(r'[\\/]')).last, maxLines: 2, overflow: TextOverflow.ellipsis, style: Theme.of(context).textTheme.titleMedium),
-      const SizedBox(height: 8), Text('${items.length} coincidencia${items.length == 1 ? '' : 's'} · elegí una identidad'),
-      const Divider(),
-      for (final candidate in items) ListTile(contentPadding: EdgeInsets.zero, title: Text(candidate.title), subtitle: Text([candidate.year?.toString(), candidate.provider.toUpperCase(), if (candidate.edition.isNotEmpty) candidate.edition].whereType<String>().join(' · ')), trailing: Wrap(spacing: 4, children: [IconButton(tooltip: 'Rechazar', onPressed: () => _review(candidate, false), icon: const AppIcon(Symbols.close_rounded)), IconButton(tooltip: 'Aprobar', onPressed: () => _review(candidate, true), icon: const AppIcon(Symbols.check_rounded))])),
-    ])));
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              first.path.split(RegExp(r'[\\/]')).last,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 8),
+            Text('${items.length} coincidencia${items.length == 1 ? '' : 's'} · elegí una identidad'),
+            const Divider(),
+            for (final candidate in items)
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                title: Text(candidate.title),
+                subtitle: Text(
+                  [
+                    candidate.year?.toString(),
+                    candidate.provider.toUpperCase(),
+                    if (candidate.edition.isNotEmpty) candidate.edition,
+                  ].whereType<String>().join(' · '),
+                ),
+                trailing: Wrap(
+                  spacing: 4,
+                  children: [
+                    IconButton(
+                      tooltip: 'Rechazar',
+                      onPressed: () => _review(candidate, false),
+                      icon: const AppIcon(Symbols.close_rounded),
+                    ),
+                    IconButton(
+                      tooltip: 'Aprobar',
+                      onPressed: () => _review(candidate, true),
+                      icon: const AppIcon(Symbols.check_rounded),
+                    ),
+                  ],
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
   }
 
-  Widget _messageCard({required IconData icon, required String title, required String body}) => Card(child: Padding(padding: const EdgeInsets.all(32), child: Column(children: [AppIcon(icon, size: 42), const SizedBox(height: 12), Text(title, style: Theme.of(context).textTheme.titleLarge), const SizedBox(height: 8), Text(body, textAlign: TextAlign.center)])));
+  Widget _messageCard({required IconData icon, required String title, required String body}) => Card(
+    child: Padding(
+      padding: const EdgeInsets.all(32),
+      child: Column(
+        children: [
+          AppIcon(icon, size: 42),
+          const SizedBox(height: 12),
+          Text(title, style: Theme.of(context).textTheme.titleLarge),
+          const SizedBox(height: 8),
+          Text(body, textAlign: TextAlign.center),
+        ],
+      ),
+    ),
+  );
 }
