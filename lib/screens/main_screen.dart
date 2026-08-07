@@ -345,7 +345,10 @@ class _MainScreenState extends State<MainScreen>
     _offlineUntilConnected = widget.isOfflineMode;
 
     WidgetsBinding.instance.addObserver(this);
-    _mediaOperationsProbeTimer = Timer.periodic(const Duration(seconds: 20), (_) => _refreshMediaOperationsAvailability());
+    _mediaOperationsProbeTimer = Timer.periodic(
+      const Duration(seconds: 20),
+      (_) => _refreshMediaOperationsAvailability(),
+    );
     _contentFocusScope.addListener(_syncSidebarFocusWithContent);
 
     if (PlatformDetector.isDesktopOS()) {
@@ -1029,9 +1032,8 @@ class _MainScreenState extends State<MainScreen>
     );
   }
 
-  Future<void> _openMediaOperations() => Navigator.of(context).push(
-    MaterialPageRoute<void>(builder: (_) => const ManageScreen()),
-  );
+  Future<void> _openMediaOperations() =>
+      Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const ManageScreen()));
 
   List<Widget> _buildScreens(bool offline) {
     return [
@@ -1686,6 +1688,7 @@ class _MainScreenState extends State<MainScreen>
       _screens = _buildScreens(_isOffline);
     });
   }
+
   List<NavigationTab> _getVisibleTabs(bool isOffline) {
     return NavigationTab.getVisibleTabs(isOffline: isOffline, hasLiveTv: _hasLiveTv, hasExplore: _lastHasExplore);
   }
