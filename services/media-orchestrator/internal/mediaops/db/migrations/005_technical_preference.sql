@@ -1,0 +1,2 @@
+ALTER TABLE inventory_files ADD COLUMN IF NOT EXISTS hdr TEXT;
+ALTER TABLE inventory_files ADD COLUMN IF NOT EXISTS bitrate BIGINT;
