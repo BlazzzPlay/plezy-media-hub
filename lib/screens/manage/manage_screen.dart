@@ -25,6 +25,9 @@ class _ManageScreenState extends State<ManageScreen> {
   String? _error;
   MediaHubUpdate? _update;
   List<IdentityCandidate> _candidates = const [];
+  List<IdentityCandidate> _historyCandidates = const [];
+  List<ReorganizationPlan> _plans = const [];
+  List<WorkflowJob> _jobs = const [];
 
   String get _profileId => context.read<ActiveProfileProvider>().active?.id ?? 'local-admin';
 
@@ -52,9 +55,22 @@ class _ManageScreenState extends State<ManageScreen> {
     final client = MediaOperationsHttpClient(configured);
     try {
       await client.checkHealth();
-      final candidates = await client.listPendingCandidates();
+      final results = await Future.wait([
+        client.listPendingCandidates(),
+        client.listCandidates(),
+        client.listPlans(),
+        client.listJobs(),
+      ]);
       if (!mounted) return;
-      setState(() => _candidates = candidates);
+      final allCandidates = results[1] as List<IdentityCandidate>;
+      setState(() {
+        _candidates = results[0] as List<IdentityCandidate>;
+        _historyCandidates = allCandidates
+            .where((candidate) => candidate.status != 'pending_review' && candidate.status != 'pending')
+            .toList();
+        _plans = results[2] as List<ReorganizationPlan>;
+        _jobs = results[3] as List<WorkflowJob>;
+      });
     } catch (error) {
       if (mounted) setState(() => _error = error.toString());
     } finally {
@@ -95,16 +111,29 @@ class _ManageScreenState extends State<ManageScreen> {
   @override Widget build(BuildContext context) {
     final groups = <int, List<IdentityCandidate>>{};
     for (final candidate in _candidates) { groups.putIfAbsent(candidate.inventoryFileId, () => []).add(candidate); }
-    return Scaffold(
-      appBar: AppBar(title: const Text('Gestionar biblioteca'), actions: [IconButton(onPressed: _loading ? null : _refresh, icon: const AppIcon(Symbols.refresh_rounded))]),
-      body: ListView(padding: const EdgeInsets.all(16), children: [
-        _connectionCard(), const SizedBox(height: 12), _updateCard(), const SizedBox(height: 8),
-        if (_loading) const Center(child: Padding(padding: EdgeInsets.all(32), child: CircularProgressIndicator()))
-        else if (_error != null) _messageCard(icon: Symbols.cloud_off_rounded, title: 'No se pudo cargar', body: _error!)
-        else if (_candidates.isEmpty) _messageCard(icon: Symbols.task_alt_rounded, title: 'Sin identidades pendientes', body: 'El Orquestador está conectado y no hay archivos esperando aprobación.')
-        else ...[Text('${groups.length} archivos para revisar', style: Theme.of(context).textTheme.titleLarge), const SizedBox(height: 8), for (final group in groups.values) _candidateGroup(group)],
-      ]),
+    return DefaultTabController(
+      length: 4,
+      child: Scaffold(
+        appBar: AppBar(title: const Text('Gestionar biblioteca'), actions: [IconButton(onPressed: _loading ? null : _refresh, icon: const AppIcon(Symbols.refresh_rounded))]),
+        body: Column(children: [
+          _connectionCard(), _updateCard(),
+          const TabBar(isScrollable: true, tabs: [Tab(text: 'Identificar'), Tab(text: 'Planes'), Tab(text: 'Cola'), Tab(text: 'Historial')]),
+          Expanded(child: _loading
+            ? const Center(child: CircularProgressIndicator())
+            : _error != null
+              ? _messageCard(icon: Symbols.cloud_off_rounded, title: 'No se pudo cargar', body: _error!)
+              : TabBarView(children: [_reviewView(groups), _plansView(), _queueView(), _historyView()])),
+        ]),
+      ),
     );
+  }
+
+  Widget _reviewView(Map<int, List<IdentityCandidate>> groups) {
+    if (groups.isEmpty) return _messageCard(icon: Symbols.task_alt_rounded, title: 'Sin identidades pendientes', body: 'Las aprobaciones quedan en Historial. Antes de mover archivos se debe revisar un plan.');
+    return ListView(padding: const EdgeInsets.all(16), children: [
+      Text('${groups.length} archivos para revisar', style: Theme.of(context).textTheme.titleLarge), const SizedBox(height: 8),
+      for (final group in groups.values) _candidateGroup(group),
+    ]);
   }
 
   Widget _connectionCard() => Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -124,6 +153,35 @@ class _ManageScreenState extends State<ManageScreen> {
       icon: _checkingUpdate ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)) : const AppIcon(Symbols.refresh_rounded),
     ),
   ));
+
+  Widget _plansView() {
+    final plans = _plans.where((plan) => plan.action == 'planned').toList();
+    if (plans.isEmpty) return _messageCard(icon: Symbols.rule_rounded, title: 'Sin planes pendientes', body: 'Los planes se revisan aquí antes de ejecutar cualquier movimiento.');
+    return ListView(padding: const EdgeInsets.all(16), children: [
+      Text('${plans.length} planes para revisar', style: Theme.of(context).textTheme.titleLarge),
+      for (final plan in plans) Card(child: ListTile(leading: const AppIcon(Symbols.drive_file_move_rounded), title: Text(plan.sourcePath), subtitle: Text('${plan.operation.toUpperCase()} → ${plan.targetPath}\n${plan.reason}', maxLines: 3, overflow: TextOverflow.ellipsis))),
+    ]);
+  }
+
+  Widget _queueView() {
+    final active = _jobs.where((job) => job.status == 'pending' || job.status == 'running').toList();
+    if (active.isEmpty) return _messageCard(icon: Symbols.hourglass_empty_rounded, title: 'Cola vacía', body: 'No hay procesos ejecutándose. Los planes requieren confirmación explícita.');
+    return ListView(padding: const EdgeInsets.all(16), children: [
+      Text('${active.length} procesos activos', style: Theme.of(context).textTheme.titleLarge),
+      for (final job in active) Card(child: ListTile(leading: AppIcon(job.status == 'running' ? Symbols.sync_rounded : Symbols.schedule_rounded), title: Text(job.type), subtitle: Text('${job.status} · intento ${job.attempts}/${job.maxAttempts}'))),
+    ]);
+  }
+
+  Widget _historyView() {
+    final plans = _plans.where((plan) => plan.action != 'planned').toList();
+    final jobs = _jobs.where((job) => job.status != 'pending' && job.status != 'running').toList();
+    if (_historyCandidates.isEmpty && plans.isEmpty && jobs.isEmpty) return _messageCard(icon: Symbols.history_rounded, title: 'Sin historial', body: 'Acá quedarán identidades, planes y procesos finalizados.');
+    return ListView(padding: const EdgeInsets.all(16), children: [
+      for (final candidate in _historyCandidates) Card(child: ListTile(leading: AppIcon(candidate.status == 'accepted' ? Symbols.check_circle_rounded : Symbols.cancel_rounded), title: Text(candidate.title), subtitle: Text(candidate.status))),
+      for (final plan in plans) Card(child: ListTile(leading: const AppIcon(Symbols.rule_rounded), title: Text(plan.action), subtitle: Text(plan.sourcePath))),
+      for (final job in jobs) Card(child: ListTile(leading: AppIcon(job.status == 'completed' ? Symbols.check_circle_rounded : Symbols.error_rounded), title: Text(job.type), subtitle: Text(job.lastError.isEmpty ? job.status : '${job.status} · ${job.lastError}'))),
+    ]);
+  }
 
   Widget _candidateGroup(List<IdentityCandidate> items) {
     final first = items.first;
