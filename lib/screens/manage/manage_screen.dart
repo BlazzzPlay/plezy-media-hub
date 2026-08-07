@@ -6,6 +6,7 @@ import '../../models/media_operations/media_operations_models.dart';
 import '../../profiles/active_profile_provider.dart';
 import '../../services/media_operations/media_operations_http_client.dart';
 import '../../services/media_operations/media_operations_session_store.dart';
+import '../../services/media_operations/media_update_service.dart';
 import '../../widgets/app_icon.dart';
 
 class ManageScreen extends StatefulWidget {
@@ -20,12 +21,14 @@ class _ManageScreenState extends State<ManageScreen> {
   static const _defaultOrchestratorUrl = 'http://100.87.101.20:8100';
   bool _loading = true;
   bool _saving = false;
+  bool _checkingUpdate = false;
   String? _error;
+  MediaHubUpdate? _update;
   List<IdentityCandidate> _candidates = const [];
 
   String get _profileId => context.read<ActiveProfileProvider>().active?.id ?? 'local-admin';
 
-  @override void initState() { super.initState(); WidgetsBinding.instance.addPostFrameCallback((_) => _load()); }
+  @override void initState() { super.initState(); WidgetsBinding.instance.addPostFrameCallback((_) { _load(); _checkForUpdate(); }); }
   @override void dispose() { _url.dispose(); _key.dispose(); super.dispose(); }
 
   Future<void> _load() async {
@@ -69,6 +72,16 @@ class _ManageScreenState extends State<ManageScreen> {
     } finally { if (mounted) setState(() => _saving = false); }
   }
 
+  Future<void> _checkForUpdate() async {
+    if (mounted) setState(() => _checkingUpdate = true);
+    try {
+      final update = await MediaUpdateService.checkForUpdate();
+      if (mounted) setState(() => _update = update);
+    } finally {
+      if (mounted) setState(() => _checkingUpdate = false);
+    }
+  }
+
   Future<void> _review(IdentityCandidate candidate, bool approved) async {
     final client = MediaOperationsHttpClient(MediaOperationsSession(baseUrl: _url.text.trim(), apiKey: _key.text.trim()));
     try {
@@ -85,7 +98,7 @@ class _ManageScreenState extends State<ManageScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text('Gestionar biblioteca'), actions: [IconButton(onPressed: _loading ? null : _refresh, icon: const AppIcon(Symbols.refresh_rounded))]),
       body: ListView(padding: const EdgeInsets.all(16), children: [
-        _connectionCard(), const SizedBox(height: 16),
+        _connectionCard(), const SizedBox(height: 12), _updateCard(), const SizedBox(height: 8),
         if (_loading) const Center(child: Padding(padding: EdgeInsets.all(32), child: CircularProgressIndicator()))
         else if (_error != null) _messageCard(icon: Symbols.cloud_off_rounded, title: 'No se pudo cargar', body: _error!)
         else if (_candidates.isEmpty) _messageCard(icon: Symbols.task_alt_rounded, title: 'Sin identidades pendientes', body: 'El Orquestador está conectado y no hay archivos esperando aprobación.')
@@ -100,6 +113,17 @@ class _ManageScreenState extends State<ManageScreen> {
     const SizedBox(height: 8), TextField(controller: _key, obscureText: true, decoration: const InputDecoration(labelText: 'Clave de acceso')),
     const SizedBox(height: 12), FilledButton.icon(onPressed: _saving ? null : _saveAndConnect, icon: const AppIcon(Symbols.link_rounded), label: Text(_saving ? 'Guardando…' : 'Guardar y conectar')),
   ])));
+
+  Widget _updateCard() => Card(child: ListTile(
+    leading: const AppIcon(Symbols.system_update_rounded),
+    title: Text(_update == null ? 'Actualizaciones' : 'Actualización disponible: ' + _update!.version),
+    subtitle: Text(_update == null ? 'La app está actualizada o no hay una versión publicada.' : _update!.fileName),
+    trailing: IconButton(
+      tooltip: 'Buscar actualización',
+      onPressed: _checkingUpdate ? null : _checkForUpdate,
+      icon: _checkingUpdate ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)) : const AppIcon(Symbols.refresh_rounded),
+    ),
+  ));
 
   Widget _candidateGroup(List<IdentityCandidate> items) {
     final first = items.first;

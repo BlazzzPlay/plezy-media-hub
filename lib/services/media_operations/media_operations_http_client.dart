@@ -18,15 +18,32 @@ class MediaOperationsHttpClient {
     _throwForStatus(response);
   }
 
-  Future<List<IdentityCandidate>> listPendingCandidates() async {
-    final response = await _send('GET', '/api/v1/candidates?status=pending&limit=500');
-    final body = jsonDecode(response.body) as Map<String, dynamic>;
-    final items = body['items'] as List<dynamic>? ?? const [];
-    return items.map((item) => IdentityCandidate.fromJson(item as Map<String, dynamic>)).toList();
+  Future<List<IdentityCandidate>> listCandidates({String? status}) async {
+    final query = status == null || status.isEmpty ? '' : '?status=$status&limit=500';
+    final response = await _send('GET', '/api/v1/candidates$query');
+    return _items(response).map(IdentityCandidate.fromJson).toList();
+  }
+
+  Future<List<IdentityCandidate>> listPendingCandidates() => listCandidates(status: 'pending_review');
+
+  Future<List<ReorganizationPlan>> listPlans() async {
+    final response = await _send('GET', '/api/v1/reorganization-plans?limit=500');
+    return _items(response).map(ReorganizationPlan.fromJson).toList();
+  }
+
+  Future<List<WorkflowJob>> listJobs() async {
+    final response = await _send('GET', '/api/v1/workflow-jobs?limit=500');
+    return _items(response).map(WorkflowJob.fromJson).toList();
   }
 
   Future<void> approve(int candidateId) async => _send('POST', '/api/v1/candidates/$candidateId/approve');
   Future<void> reject(int candidateId) async => _send('POST', '/api/v1/candidates/$candidateId/reject');
+
+  List<Map<String, dynamic>> _items(http.Response response) {
+    final body = jsonDecode(response.body) as Map<String, dynamic>;
+    final items = body['items'] as List<dynamic>? ?? const [];
+    return items.map((item) => item as Map<String, dynamic>).toList();
+  }
 
   Future<http.Response> _send(String method, String path) async {
     final response = await sendAbortableHttpRequest(_http, method, Uri.parse('${session.baseUrl}$path'), headers: {'Accept': 'application/json', 'Authorization': 'Bearer ${session.apiKey}'}, timeout: const Duration(seconds: 15), operation: 'Media Orchestrator $method $path');

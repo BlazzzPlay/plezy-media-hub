@@ -36,3 +36,44 @@ class IdentityCandidate {
     edition: json['edition'] as String? ?? '',
   );
 }
+
+
+class ReorganizationPlan {
+  final int id;
+  final String sourcePath;
+  final String targetPath;
+  final String operation;
+  final String action;
+  final String reason;
+
+  const ReorganizationPlan({required this.id, required this.sourcePath, required this.targetPath, required this.operation, required this.action, required this.reason});
+
+  factory ReorganizationPlan.fromJson(Map<String, dynamic> json) => ReorganizationPlan(
+    id: (json['id'] as num?)?.toInt() ?? 0,
+    sourcePath: json['source_path'] as String? ?? '',
+    targetPath: json['target_path'] as String? ?? '',
+    operation: json['operation'] as String? ?? 'move',
+    action: json['action'] as String? ?? 'planned',
+    reason: json['reason'] as String? ?? '',
+  );
+}
+
+class WorkflowJob {
+  final int id;
+  final String type;
+  final String status;
+  final int attempts;
+  final int maxAttempts;
+  final String lastError;
+
+  const WorkflowJob({required this.id, required this.type, required this.status, required this.attempts, required this.maxAttempts, required this.lastError});
+
+  factory WorkflowJob.fromJson(Map<String, dynamic> json) => WorkflowJob(
+    id: (json['id'] as num?)?.toInt() ?? 0,
+    type: json['type'] as String? ?? 'Proceso',
+    status: json['status'] as String? ?? 'pending',
+    attempts: (json['attempts'] as num?)?.toInt() ?? 0,
+    maxAttempts: (json['max_attempts'] as num?)?.toInt() ?? 1,
+    lastError: json['last_error'] as String? ?? '',
+  );
+}
