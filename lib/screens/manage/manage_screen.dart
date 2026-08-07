@@ -125,10 +125,12 @@ class _ManageScreenState extends State<ManageScreen> {
     setState(() => _saving = true);
     try {
       await _store.save(_profileId, session);
-      if (mounted) setState(() {
-        _hasSavedConnection = true;
-        _connectionExpanded = false;
-      });
+      if (mounted) {
+        setState(() {
+          _hasSavedConnection = true;
+          _connectionExpanded = false;
+        });
+      }
       await _refresh(session: session);
     } finally {
       if (mounted) setState(() => _saving = false);
