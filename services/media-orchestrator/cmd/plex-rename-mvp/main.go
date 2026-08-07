@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"log/slog"
+	"net"
 	"net/http"
 	"os"
 	"time"
@@ -26,7 +27,7 @@ func main() {
 		os.Exit(1)
 	}
 	defer store.Close()
-	srv := &http.Server{Addr: ":" + itoa(c.Port), Handler: mvphttp.NewWithMediaRoot(store, c.APIKey, c.StagingRoot).Handler(), ReadHeaderTimeout: 5 * time.Second}
+	srv := &http.Server{Addr: net.JoinHostPort(c.Host, itoa(c.Port)), Handler: mvphttp.NewWithMediaRoot(store, c.APIKey, c.StagingRoot).Handler(), ReadHeaderTimeout: 5 * time.Second}
 	slog.Info("media-orchestrator listening", "addr", srv.Addr, "media_config", c.MediaConfig, "staging_root", c.StagingRoot)
 	if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		slog.Error("server failed", "error", err)

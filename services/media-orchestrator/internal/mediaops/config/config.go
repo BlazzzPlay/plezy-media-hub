@@ -10,15 +10,22 @@ import (
 type Config struct {
 	APIKey      string
 	DatabaseURL string
+	Host        string
 	Port        int
 	MediaConfig string
 	StagingRoot string
+}
+
+func envOr(key, fallback string) string {
+	if value := os.Getenv(key); value != "" { return value }
+	return fallback
 }
 
 func Load() (Config, error) {
 	c := Config{
 		APIKey:      os.Getenv("MEDIA_OPS_API_KEY"),
 		DatabaseURL: os.Getenv("MEDIA_OPS_DATABASE_URL"),
+		Host:        envOr("MEDIA_OPS_HOST", "127.0.0.1"),
 		MediaConfig: os.Getenv("MEDIA_OPS_CONFIG_ROOT"),
 		StagingRoot: os.Getenv("MEDIA_OPS_STAGING_ROOT"),
 		Port:        8100,
