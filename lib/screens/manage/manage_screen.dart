@@ -90,7 +90,9 @@ class _ManageScreenState extends State<ManageScreen> {
         client.listJobs(),
         client.getDiskHealth(),
       ]);
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
       final allCandidates = results[1] as List<IdentityCandidate>;
       setState(() {
         _candidates = results[0] as List<IdentityCandidate>;
