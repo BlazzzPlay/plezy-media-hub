@@ -58,7 +58,9 @@ class MediaUpdateService {
     }
     final httpClient = client ?? http.Client();
     try {
-      final response = await httpClient.send(http.Request('GET', Uri.parse(update.downloadUrl))).timeout(const Duration(minutes: 5));
+      final response = await httpClient
+          .send(http.Request('GET', Uri.parse(update.downloadUrl)))
+          .timeout(const Duration(minutes: 5));
       if (response.statusCode != HttpStatus.ok) {
         throw HttpException('No se pudo descargar la actualización (${response.statusCode}).');
       }

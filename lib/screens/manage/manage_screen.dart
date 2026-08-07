@@ -160,20 +160,22 @@ class _ManageScreenState extends State<ManageScreen> {
       _updateProgress = 0;
     });
     try {
-      final apk = _downloadedApk ?? await MediaUpdateService.downloadApk(
-        update,
-        onProgress: (received, total) {
-          if (mounted) setState(() => _updateProgress = total > 0 ? received / total : null);
-        },
-      );
+      final apk =
+          _downloadedApk ??
+          await MediaUpdateService.downloadApk(
+            update,
+            onProgress: (received, total) {
+              if (mounted) setState(() => _updateProgress = total > 0 ? received / total : null);
+            },
+          );
       if (!mounted) return;
       setState(() => _downloadedApk = apk);
       final install = await MediaUpdateService.installApk(apk);
       if (!mounted) return;
       if (install.requiresPermission) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Permití instalar desde Plezy y luego tocá Instalar nuevamente.')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Permití instalar desde Plezy y luego tocá Instalar nuevamente.')));
       }
     } catch (error) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('No se pudo actualizar: $error')));
@@ -212,7 +214,11 @@ class _ManageScreenState extends State<ManageScreen> {
         appBar: AppBar(
           title: const Text('Gestionar biblioteca'),
           actions: [
-            IconButton(tooltip: 'Configuración del Orquestador', onPressed: () => setState(() => _connectionExpanded = !_connectionExpanded), icon: const AppIcon(Symbols.settings_rounded)),
+            IconButton(
+              tooltip: 'Configuración del Orquestador',
+              onPressed: () => setState(() => _connectionExpanded = !_connectionExpanded),
+              icon: const AppIcon(Symbols.settings_rounded),
+            ),
             IconButton(onPressed: _loading ? null : _refresh, icon: const AppIcon(Symbols.refresh_rounded)),
           ],
         ),
@@ -236,7 +242,16 @@ class _ManageScreenState extends State<ManageScreen> {
                   ? const Center(child: CircularProgressIndicator())
                   : _error != null
                   ? _messageCard(icon: Symbols.cloud_off_rounded, title: 'No se pudo cargar', body: _error!)
-                  : TabBarView(children: [_summaryView(groups), _reviewView(groups), _plansView(), _queueView(), _historyView(), _healthView()]),
+                  : TabBarView(
+                      children: [
+                        _summaryView(groups),
+                        _reviewView(groups),
+                        _plansView(),
+                        _queueView(),
+                        _historyView(),
+                        _healthView(),
+                      ],
+                    ),
             ),
           ],
         ),
@@ -305,11 +320,7 @@ class _ManageScreenState extends State<ManageScreen> {
   }
 
   Widget _metricCard(IconData icon, String title, String value) => Card(
-    child: ListTile(
-      leading: AppIcon(icon),
-      title: Text(title),
-      subtitle: Text(value),
-    ),
+    child: ListTile(leading: AppIcon(icon), title: Text(title), subtitle: Text(value)),
   );
 
   Widget _reviewView(Map<int, List<IdentityCandidate>> groups) {
@@ -362,46 +373,64 @@ class _ManageScreenState extends State<ManageScreen> {
 
   Widget _updateCard() => Card(
     margin: const EdgeInsets.fromLTRB(12, 4, 12, 2),
-    child: _update == null ? SizedBox(
-      height: 48,
-      child: ListTile(
-        dense: true,
-        leading: const AppIcon(Symbols.system_update_rounded),
-        title: const Text('Actualizaciones'),
-        trailing: IconButton(
-          tooltip: 'Buscar actualización',
-          onPressed: _checkingUpdate ? null : _checkForUpdate,
-          icon: _checkingUpdate ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const AppIcon(Symbols.refresh_rounded),
-        ),
-      ),
-    ) : Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      child: Column(
-        children: [
-          Row(children: [
-            const AppIcon(Symbols.system_update_rounded),
-            const SizedBox(width: 12),
-            Expanded(child: Text('Nueva versión: ${_update!.version}', maxLines: 1, overflow: TextOverflow.ellipsis)),
-            IconButton(tooltip: 'Buscar actualización', onPressed: _checkingUpdate ? null : _checkForUpdate, icon: const AppIcon(Symbols.refresh_rounded)),
-          ]),
-          if (_downloadingUpdate) ...[
-            const SizedBox(height: 6),
-            LinearProgressIndicator(value: _updateProgress),
-            const SizedBox(height: 6),
-          ],
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton.icon(
-              onPressed: _downloadingUpdate ? null : _downloadAndInstallUpdate,
-              icon: _downloadingUpdate
-                  ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
-                  : AppIcon(_downloadedApk == null ? Symbols.download_rounded : Symbols.install_mobile_rounded),
-              label: Text(_downloadingUpdate ? 'Descargando…' : _downloadedApk == null ? 'Descargar e instalar' : 'Instalar actualización'),
+    child: _update == null
+        ? SizedBox(
+            height: 48,
+            child: ListTile(
+              dense: true,
+              leading: const AppIcon(Symbols.system_update_rounded),
+              title: const Text('Actualizaciones'),
+              trailing: IconButton(
+                tooltip: 'Buscar actualización',
+                onPressed: _checkingUpdate ? null : _checkForUpdate,
+                icon: _checkingUpdate
+                    ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                    : const AppIcon(Symbols.refresh_rounded),
+              ),
+            ),
+          )
+        : Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            child: Column(
+              children: [
+                Row(
+                  children: [
+                    const AppIcon(Symbols.system_update_rounded),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text('Nueva versión: ${_update!.version}', maxLines: 1, overflow: TextOverflow.ellipsis),
+                    ),
+                    IconButton(
+                      tooltip: 'Buscar actualización',
+                      onPressed: _checkingUpdate ? null : _checkForUpdate,
+                      icon: const AppIcon(Symbols.refresh_rounded),
+                    ),
+                  ],
+                ),
+                if (_downloadingUpdate) ...[
+                  const SizedBox(height: 6),
+                  LinearProgressIndicator(value: _updateProgress),
+                  const SizedBox(height: 6),
+                ],
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    onPressed: _downloadingUpdate ? null : _downloadAndInstallUpdate,
+                    icon: _downloadingUpdate
+                        ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                        : AppIcon(_downloadedApk == null ? Symbols.download_rounded : Symbols.install_mobile_rounded),
+                    label: Text(
+                      _downloadingUpdate
+                          ? 'Descargando…'
+                          : _downloadedApk == null
+                          ? 'Descargar e instalar'
+                          : 'Instalar actualización',
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
-        ],
-      ),
-    ),
   );
 
   Widget _plansView() {
