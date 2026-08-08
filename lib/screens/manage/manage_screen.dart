@@ -243,7 +243,7 @@ class _ManageScreenState extends State<ManageScreen> {
 
   String _contentGroupKey(IdentityCandidate candidate) {
     final fileName = candidate.path.split(RegExp(r'[\\/]')).last.replaceFirst(RegExp(r'\.[^.]+$'), '');
-    final seriesName = fileName.replaceFirst(RegExp(r'(?i)\bS\d{1,2}E\d{1,3}\b.*$'), '').replaceAll(RegExp(r'[.\-_\s]+$'), '').trim();
+    final seriesName = fileName.replaceFirst(RegExp(r'\bS\d{1,2}E\d{1,3}\b.*$', caseSensitive: false), '').replaceAll(RegExp(r'[.\-_\s]+$'), '').trim();
     return seriesName.isEmpty ? 'file:${candidate.inventoryFileId}' : 'series:${seriesName.toLowerCase()}';
   }
 
@@ -541,7 +541,7 @@ class _ManageScreenState extends State<ManageScreen> {
       result.putIfAbsent(key, () => candidate);
       return result;
     }).values.toList();
-    final title = first.path.split(RegExp(r'[\\/]')).last.replaceFirst(RegExp(r'\.[^.]+$'), '').replaceFirst(RegExp(r'(?i)\bS\d{1,2}E\d{1,3}\b.*$'), '').replaceAll(RegExp(r'[.\-_\s]+$'), '').trim();
+    final title = first.path.split(RegExp(r'[\\/]')).last.replaceFirst(RegExp(r'\.[^.]+$'), '').replaceFirst(RegExp(r'\bS\d{1,2}E\d{1,3}\b.*$', caseSensitive: false), '').replaceAll(RegExp(r'[.\-_\s]+$'), '').trim();
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
