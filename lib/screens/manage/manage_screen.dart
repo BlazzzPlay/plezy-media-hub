@@ -184,29 +184,11 @@ class _ManageScreenState extends State<ManageScreen> {
     }
   }
 
-  Future<void> _review(IdentityCandidate candidate, bool approved) async {
-    final client = MediaOperationsHttpClient(
-      MediaOperationsSession(baseUrl: _url.text.trim(), apiKey: _key.text.trim()),
-    );
-    try {
-      if (approved) {
-        await client.approve(candidate.id);
-      } else {
-        await client.reject(candidate.id);
-      }
-      if (mounted) await _refresh();
-    } catch (error) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.toString())));
-    } finally {
-      client.dispose();
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
-    final groups = <int, List<IdentityCandidate>>{};
+    final groups = <String, List<IdentityCandidate>>{};
     for (final candidate in _candidates) {
-      groups.putIfAbsent(candidate.inventoryFileId, () => []).add(candidate);
+      groups.putIfAbsent(_contentGroupKey(candidate), () => []).add(candidate);
     }
     return DefaultTabController(
       length: 6,
@@ -259,7 +241,13 @@ class _ManageScreenState extends State<ManageScreen> {
     );
   }
 
-  Widget _summaryView(Map<int, List<IdentityCandidate>> groups) {
+  String _contentGroupKey(IdentityCandidate candidate) {
+    final fileName = candidate.path.split(RegExp(r'[\\/]')).last.replaceFirst(RegExp(r'\.[^.]+$'), '');
+    final seriesName = fileName.replaceFirst(RegExp(r'(?i)\bS\d{1,2}E\d{1,3}\b.*$'), '').replaceAll(RegExp(r'[.\-_\s]+$'), '').trim();
+    return seriesName.isEmpty ? 'file:${candidate.inventoryFileId}' : 'series:${seriesName.toLowerCase()}';
+  }
+
+  Widget _summaryView(Map<String, List<IdentityCandidate>> groups) {
     final activeJobs = _jobs.where((job) => job.status == 'pending' || job.status == 'running').length;
     final planned = _plans.where((plan) => plan.action == 'planned').length;
     return ListView(
@@ -267,7 +255,7 @@ class _ManageScreenState extends State<ManageScreen> {
       children: [
         Text('Resumen operativo', style: Theme.of(context).textTheme.titleLarge),
         const SizedBox(height: 12),
-        _metricCard(Symbols.manage_search_rounded, 'Identidades', '${groups.length} archivos pendientes'),
+        _metricCard(Symbols.manage_search_rounded, 'Identidades', '${groups.length} contenidos pendientes'),
         _metricCard(Symbols.rule_rounded, 'Planes', '$planned por revisar'),
         _metricCard(Symbols.sync_rounded, 'Procesos', '$activeJobs en cola o ejecución'),
         _metricCard(
@@ -323,7 +311,7 @@ class _ManageScreenState extends State<ManageScreen> {
     child: ListTile(leading: AppIcon(icon), title: Text(title), subtitle: Text(value)),
   );
 
-  Widget _reviewView(Map<int, List<IdentityCandidate>> groups) {
+  Widget _reviewView(Map<String, List<IdentityCandidate>> groups) {
     if (groups.isEmpty) {
       return _messageCard(
         icon: Symbols.task_alt_rounded,
@@ -334,7 +322,7 @@ class _ManageScreenState extends State<ManageScreen> {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        Text('${groups.length} archivos para revisar', style: Theme.of(context).textTheme.titleLarge),
+        Text('${groups.length} contenidos para revisar', style: Theme.of(context).textTheme.titleLarge),
         const SizedBox(height: 8),
         for (final group in groups.values) _candidateGroup(group),
       ],
@@ -528,8 +516,32 @@ class _ManageScreenState extends State<ManageScreen> {
     );
   }
 
+  Future<void> _reviewGroup(List<IdentityCandidate> group, IdentityCandidate selected, bool approved) async {
+    final selection = group.where((candidate) => selected.externalId.isNotEmpty
+        ? candidate.provider == selected.provider && candidate.externalId == selected.externalId
+        : candidate.provider == selected.provider && candidate.title == selected.title && candidate.year == selected.year).toList();
+    if (selection.isEmpty) return;
+    final client = MediaOperationsHttpClient(MediaOperationsSession(baseUrl: _url.text.trim(), apiKey: _key.text.trim()));
+    try {
+      await Future.wait(selection.map((candidate) => approved ? client.approve(candidate.id) : client.reject(candidate.id)));
+      if (mounted) await _refresh();
+    } catch (error) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.toString())));
+    } finally {
+      client.dispose();
+    }
+  }
+
   Widget _candidateGroup(List<IdentityCandidate> items) {
     final first = items.first;
+    final fileCount = items.map((candidate) => candidate.inventoryFileId).toSet().length;
+    final externalMatches = items.where((candidate) => candidate.externalId.isNotEmpty).toList();
+    final choices = (externalMatches.isEmpty ? items : externalMatches).fold<Map<String, IdentityCandidate>>({}, (result, candidate) {
+      final key = '${candidate.provider}|${candidate.externalId}|${candidate.title}|${candidate.year}';
+      result.putIfAbsent(key, () => candidate);
+      return result;
+    }).values.toList();
+    final title = first.path.split(RegExp(r'[\\/]')).last.replaceFirst(RegExp(r'\.[^.]+$'), '').replaceFirst(RegExp(r'(?i)\bS\d{1,2}E\d{1,3}\b.*$'), '').replaceAll(RegExp(r'[.\-_\s]+$'), '').trim();
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -537,15 +549,15 @@ class _ManageScreenState extends State<ManageScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              first.path.split(RegExp(r'[\\/]')).last,
+              title.isEmpty ? first.path.split(RegExp(r'[\\/]')).last : title,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: 8),
-            Text('${items.length} coincidencia${items.length == 1 ? '' : 's'} · elegí una identidad'),
+            Text('$fileCount archivo${fileCount == 1 ? '' : 's'} · ${choices.length} identidad${choices.length == 1 ? '' : 'es'} posibles'),
             const Divider(),
-            for (final candidate in items)
+            for (final candidate in choices)
               ListTile(
                 contentPadding: EdgeInsets.zero,
                 title: Text(candidate.title),
@@ -561,12 +573,12 @@ class _ManageScreenState extends State<ManageScreen> {
                   children: [
                     IconButton(
                       tooltip: 'Rechazar',
-                      onPressed: () => _review(candidate, false),
+                      onPressed: () => _reviewGroup(items, candidate, false),
                       icon: const AppIcon(Symbols.close_rounded),
                     ),
                     IconButton(
                       tooltip: 'Aprobar',
-                      onPressed: () => _review(candidate, true),
+                      onPressed: () => _reviewGroup(items, candidate, true),
                       icon: const AppIcon(Symbols.check_rounded),
                     ),
                   ],
