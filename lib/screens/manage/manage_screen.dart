@@ -243,7 +243,10 @@ class _ManageScreenState extends State<ManageScreen> {
 
   String _contentGroupKey(IdentityCandidate candidate) {
     final fileName = candidate.path.split(RegExp(r'[\\/]')).last.replaceFirst(RegExp(r'\.[^.]+$'), '');
-    final seriesName = fileName.replaceFirst(RegExp(r'\bS\d{1,2}E\d{1,3}\b.*$', caseSensitive: false), '').replaceAll(RegExp(r'[.\-_\s]+$'), '').trim();
+    final seriesName = fileName
+        .replaceFirst(RegExp(r'\bS\d{1,2}E\d{1,3}\b.*$', caseSensitive: false), '')
+        .replaceAll(RegExp(r'[.\-_\s]+$'), '')
+        .trim();
     return seriesName.isEmpty ? 'file:${candidate.inventoryFileId}' : 'series:${seriesName.toLowerCase()}';
   }
 
@@ -517,16 +520,38 @@ class _ManageScreenState extends State<ManageScreen> {
   }
 
   Future<void> _reviewGroup(List<IdentityCandidate> group, IdentityCandidate selected, bool approved) async {
-    final selection = group.where((candidate) => selected.externalId.isNotEmpty
-        ? candidate.provider == selected.provider && candidate.externalId == selected.externalId
-        : candidate.provider == selected.provider && candidate.title == selected.title && candidate.year == selected.year).toList();
+    final selection = group
+        .where(
+          (candidate) => selected.externalId.isNotEmpty
+              ? candidate.provider == selected.provider && candidate.externalId == selected.externalId
+              : candidate.provider == selected.provider &&
+                    candidate.title == selected.title &&
+                    candidate.year == selected.year,
+        )
+        .toList();
     if (selection.isEmpty) return;
-    final client = MediaOperationsHttpClient(MediaOperationsSession(baseUrl: _url.text.trim(), apiKey: _key.text.trim()));
+    final client = MediaOperationsHttpClient(
+      MediaOperationsSession(baseUrl: _url.text.trim(), apiKey: _key.text.trim()),
+    );
     try {
-      await Future.wait(selection.map((candidate) => approved ? client.approve(candidate.id) : client.reject(candidate.id)));
+      await Future.wait(
+        selection.map((candidate) => approved ? client.approve(candidate.id) : client.reject(candidate.id)),
+      );
       if (mounted) await _refresh();
     } catch (error) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.toString())));
+    } finally {
+      client.dispose();
+    }
+  }
+
+  Future<void> _adjudicate(IdentityCandidate candidate) async {
+    final client = MediaOperationsHttpClient(
+      MediaOperationsSession(baseUrl: _url.text.trim(), apiKey: _key.text.trim()),
+    );
+    try {
+      await client.adjudicate(candidate.inventoryFileId);
+      if (mounted) await _refresh();
     } finally {
       client.dispose();
     }
@@ -536,12 +561,21 @@ class _ManageScreenState extends State<ManageScreen> {
     final first = items.first;
     final fileCount = items.map((candidate) => candidate.inventoryFileId).toSet().length;
     final externalMatches = items.where((candidate) => candidate.externalId.isNotEmpty).toList();
-    final choices = (externalMatches.isEmpty ? items : externalMatches).fold<Map<String, IdentityCandidate>>({}, (result, candidate) {
-      final key = '${candidate.provider}|${candidate.externalId}|${candidate.title}|${candidate.year}';
-      result.putIfAbsent(key, () => candidate);
-      return result;
-    }).values.toList();
-    final title = first.path.split(RegExp(r'[\\/]')).last.replaceFirst(RegExp(r'\.[^.]+$'), '').replaceFirst(RegExp(r'\bS\d{1,2}E\d{1,3}\b.*$', caseSensitive: false), '').replaceAll(RegExp(r'[.\-_\s]+$'), '').trim();
+    final choices = (externalMatches.isEmpty ? items : externalMatches)
+        .fold<Map<String, IdentityCandidate>>({}, (result, candidate) {
+          final key = '${candidate.provider}|${candidate.externalId}|${candidate.title}|${candidate.year}';
+          result.putIfAbsent(key, () => candidate);
+          return result;
+        })
+        .values
+        .toList();
+    final title = first.path
+        .split(RegExp(r'[\\/]'))
+        .last
+        .replaceFirst(RegExp(r'\.[^.]+$'), '')
+        .replaceFirst(RegExp(r'\bS\d{1,2}E\d{1,3}\b.*$', caseSensitive: false), '')
+        .replaceAll(RegExp(r'[.\-_\s]+$'), '')
+        .trim();
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -555,7 +589,9 @@ class _ManageScreenState extends State<ManageScreen> {
               style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: 8),
-            Text('$fileCount archivo${fileCount == 1 ? '' : 's'} · ${choices.length} identidad${choices.length == 1 ? '' : 'es'} posibles'),
+            Text(
+              '$fileCount archivo${fileCount == 1 ? '' : 's'} · ${choices.length} identidad${choices.length == 1 ? '' : 'es'} posibles',
+            ),
             const Divider(),
             for (final candidate in choices)
               ListTile(
@@ -565,12 +601,19 @@ class _ManageScreenState extends State<ManageScreen> {
                   [
                     candidate.year?.toString(),
                     candidate.provider.toUpperCase(),
+                    if (candidate.matchScore != null)
+                      '${(candidate.matchScore! * 100).toStringAsFixed(0)}% coincidencia',
                     if (candidate.edition.isNotEmpty) candidate.edition,
                   ].whereType<String>().join(' · '),
                 ),
                 trailing: Wrap(
                   spacing: 4,
                   children: [
+                    IconButton(
+                      tooltip: 'Analizar con IA',
+                      onPressed: () => _adjudicate(candidate),
+                      icon: const AppIcon(Symbols.auto_awesome_rounded),
+                    ),
                     IconButton(
                       tooltip: 'Rechazar',
                       onPressed: () => _reviewGroup(items, candidate, false),
