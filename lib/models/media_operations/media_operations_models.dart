@@ -5,10 +5,8 @@ class MediaOperationsSession {
   const MediaOperationsSession({required this.baseUrl, required this.apiKey});
 
   Map<String, Object?> toJson() => {'baseUrl': baseUrl, 'apiKey': apiKey};
-  factory MediaOperationsSession.fromJson(Map<String, dynamic> json) => MediaOperationsSession(
-    baseUrl: json['baseUrl'] as String? ?? '',
-    apiKey: json['apiKey'] as String? ?? '',
-  );
+  factory MediaOperationsSession.fromJson(Map<String, dynamic> json) =>
+      MediaOperationsSession(baseUrl: json['baseUrl'] as String? ?? '', apiKey: json['apiKey'] as String? ?? '');
 }
 
 class IdentityCandidate {
@@ -21,8 +19,20 @@ class IdentityCandidate {
   final int? year;
   final String status;
   final String edition;
+  final double? matchScore;
 
-  const IdentityCandidate({required this.id, required this.inventoryFileId, required this.path, required this.provider, required this.externalId, required this.title, required this.year, required this.status, required this.edition});
+  const IdentityCandidate({
+    required this.id,
+    required this.inventoryFileId,
+    required this.path,
+    required this.provider,
+    required this.externalId,
+    required this.title,
+    required this.year,
+    required this.status,
+    required this.edition,
+    this.matchScore,
+  });
 
   factory IdentityCandidate.fromJson(Map<String, dynamic> json) => IdentityCandidate(
     id: (json['id'] as num?)?.toInt() ?? 0,
@@ -34,9 +44,9 @@ class IdentityCandidate {
     year: (json['year'] as num?)?.toInt(),
     status: json['status'] as String? ?? 'pending',
     edition: json['edition'] as String? ?? '',
+    matchScore: (json['match_score'] as num?)?.toDouble(),
   );
 }
-
 
 class ReorganizationPlan {
   final int id;
@@ -46,7 +56,14 @@ class ReorganizationPlan {
   final String action;
   final String reason;
 
-  const ReorganizationPlan({required this.id, required this.sourcePath, required this.targetPath, required this.operation, required this.action, required this.reason});
+  const ReorganizationPlan({
+    required this.id,
+    required this.sourcePath,
+    required this.targetPath,
+    required this.operation,
+    required this.action,
+    required this.reason,
+  });
 
   factory ReorganizationPlan.fromJson(Map<String, dynamic> json) => ReorganizationPlan(
     id: (json['id'] as num?)?.toInt() ?? 0,
@@ -67,7 +84,15 @@ class WorkflowJob {
   final String lastError;
   final String fileName;
 
-  const WorkflowJob({required this.id, required this.type, required this.status, required this.attempts, required this.maxAttempts, required this.lastError, required this.fileName});
+  const WorkflowJob({
+    required this.id,
+    required this.type,
+    required this.status,
+    required this.attempts,
+    required this.maxAttempts,
+    required this.lastError,
+    required this.fileName,
+  });
 
   factory WorkflowJob.fromJson(Map<String, dynamic> json) => WorkflowJob(
     id: (json['id'] as num?)?.toInt() ?? 0,
@@ -76,10 +101,11 @@ class WorkflowJob {
     attempts: (json['attempts'] as num?)?.toInt() ?? 0,
     maxAttempts: (json['max_attempts'] as num?)?.toInt() ?? 1,
     lastError: json['last_error'] as String? ?? '',
-    fileName: ((json['payload'] as Map<String, dynamic>?)?['file_name'] as String?) ?? ((json['checkpoint'] as Map<String, dynamic>?)?['target'] as String? ?? '').split(RegExp(r'[\\/]')).last,
+    fileName:
+        ((json['payload'] as Map<String, dynamic>?)?['file_name'] as String?) ??
+        ((json['checkpoint'] as Map<String, dynamic>?)?['target'] as String? ?? '').split(RegExp(r'[\\/]')).last,
   );
 }
-
 
 class DiskHealth {
   final String path;
