@@ -136,5 +136,10 @@ void main() {
 
       expect(tabs, same(allNavigationTabs));
     });
+
+    test('shows media operations only when the private orchestrator is reachable', () {
+      expect(shouldShowMediaOperationsShortcut(orchestratorReachable: true), isTrue);
+      expect(shouldShowMediaOperationsShortcut(orchestratorReachable: false), isFalse);
+    });
   });
 }
