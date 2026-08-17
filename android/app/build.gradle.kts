@@ -319,7 +319,7 @@ val downloadLibdovi = tasks.register("downloadLibdovi") {
 }
 
 android {
-  namespace = "cl.blazz.plezy"
+  namespace = "com.edde746.plezy"
   compileSdk = flutter.compileSdkVersion
   buildToolsVersion = "36.1.0"
   ndkVersion = "29.0.14206865"
