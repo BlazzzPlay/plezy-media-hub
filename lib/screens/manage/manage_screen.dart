@@ -576,6 +576,7 @@ class _ManageScreenState extends State<ManageScreen> {
         .replaceFirst(RegExp(r'\bS\d{1,2}E\d{1,3}\b.*$', caseSensitive: false), '')
         .replaceAll(RegExp(r'[.\-_\s]+$'), '')
         .trim();
+    final sourceId = _sourceExternalId(first.path);
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -588,6 +589,10 @@ class _ManageScreenState extends State<ManageScreen> {
               overflow: TextOverflow.ellipsis,
               style: Theme.of(context).textTheme.titleMedium,
             ),
+            if (sourceId != null) ...[
+              const SizedBox(height: 4),
+              Text('ID detectada en el archivo: $sourceId', style: Theme.of(context).textTheme.bodySmall),
+            ],
             const SizedBox(height: 8),
             Text(
               '$fileCount archivo${fileCount == 1 ? '' : 's'} · ${choices.length} identidad${choices.length == 1 ? '' : 'es'} posibles',
@@ -597,14 +602,23 @@ class _ManageScreenState extends State<ManageScreen> {
               ListTile(
                 contentPadding: EdgeInsets.zero,
                 title: Text(candidate.title),
-                subtitle: Text(
-                  [
-                    candidate.year?.toString(),
-                    candidate.provider.toUpperCase(),
-                    if (candidate.matchScore != null)
-                      '${(candidate.matchScore! * 100).toStringAsFixed(0)}% coincidencia',
-                    if (candidate.edition.isNotEmpty) candidate.edition,
-                  ].whereType<String>().join(' · '),
+                subtitle: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      [
+                        candidate.year?.toString(),
+                        _providerWithId(candidate),
+                        if (candidate.matchScore != null)
+                          '${(candidate.matchScore! * 100).toStringAsFixed(0)}% coincidencia',
+                        if (candidate.edition.isNotEmpty) candidate.edition,
+                      ].whereType<String>().join(' · '),
+                    ),
+                    if (candidate.autoApprovalReasons.isNotEmpty) ...[
+                      const SizedBox(height: 6),
+                      _autoApprovalDetails(candidate),
+                    ],
+                  ],
                 ),
                 trailing: Wrap(
                   spacing: 4,
@@ -632,6 +646,40 @@ class _ManageScreenState extends State<ManageScreen> {
       ),
     );
   }
+
+  String _providerWithId(IdentityCandidate candidate) {
+    final provider = candidate.provider.toUpperCase();
+    return candidate.externalId.isEmpty ? provider : '$provider-${candidate.externalId}';
+  }
+
+  String? _sourceExternalId(String path) {
+    final match = RegExp(r'[\[{](tmdb|tvdb)-(\d+)[\]}]', caseSensitive: false).firstMatch(path);
+    if (match == null) return null;
+    return '${match.group(1)!.toUpperCase()}-${match.group(2)!}';
+  }
+
+  Widget _autoApprovalDetails(IdentityCandidate candidate) => Container(
+    width: double.infinity,
+    padding: const EdgeInsets.all(8),
+    decoration: BoxDecoration(
+      color: candidate.autoApprovalEligible
+          ? Colors.green.withValues(alpha: .12)
+          : Colors.orange.withValues(alpha: .10),
+      borderRadius: BorderRadius.circular(8),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          candidate.autoApprovalEligible ? 'Validación automática lista' : 'Por qué no se aprobó automáticamente',
+          style: const TextStyle(fontWeight: FontWeight.w600),
+        ),
+        const SizedBox(height: 3),
+        for (final reason in candidate.autoApprovalReasons)
+          Padding(padding: const EdgeInsets.only(top: 2), child: Text('• $reason')),
+      ],
+    ),
+  );
 
   Widget _messageCard({required IconData icon, required String title, required String body}) => Card(
     child: Padding(

@@ -20,6 +20,8 @@ class IdentityCandidate {
   final String status;
   final String edition;
   final double? matchScore;
+  final bool autoApprovalEligible;
+  final List<String> autoApprovalReasons;
 
   const IdentityCandidate({
     required this.id,
@@ -32,6 +34,8 @@ class IdentityCandidate {
     required this.status,
     required this.edition,
     this.matchScore,
+    this.autoApprovalEligible = false,
+    this.autoApprovalReasons = const [],
   });
 
   factory IdentityCandidate.fromJson(Map<String, dynamic> json) => IdentityCandidate(
@@ -45,6 +49,10 @@ class IdentityCandidate {
     status: json['status'] as String? ?? 'pending',
     edition: json['edition'] as String? ?? '',
     matchScore: (json['match_score'] as num?)?.toDouble(),
+    autoApprovalEligible: json['auto_approval_eligible'] as bool? ?? false,
+    autoApprovalReasons: (json['auto_approval_reasons'] as List<dynamic>? ?? const [])
+        .map((value) => value.toString())
+        .toList(growable: false),
   );
 }
 
