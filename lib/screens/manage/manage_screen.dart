@@ -599,12 +599,19 @@ class _ManageScreenState extends State<ManageScreen> {
             ),
             const Divider(),
             for (final candidate in choices)
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                title: Text(candidate.title),
-                subtitle: Column(
+              Container(
+                width: double.infinity,
+                margin: const EdgeInsets.only(bottom: 12),
+                padding: const EdgeInsets.fromLTRB(12, 12, 8, 6),
+                decoration: BoxDecoration(
+                  border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    Text(candidate.title, style: Theme.of(context).textTheme.titleSmall),
+                    const SizedBox(height: 4),
                     Text(
                       [
                         candidate.year?.toString(),
@@ -613,30 +620,35 @@ class _ManageScreenState extends State<ManageScreen> {
                           '${(candidate.matchScore! * 100).toStringAsFixed(0)}% coincidencia',
                         if (candidate.edition.isNotEmpty) candidate.edition,
                       ].whereType<String>().join(' · '),
+                      style: Theme.of(context).textTheme.bodySmall,
                     ),
                     if (candidate.autoApprovalReasons.isNotEmpty) ...[
-                      const SizedBox(height: 6),
+                      const SizedBox(height: 10),
                       _autoApprovalDetails(candidate),
                     ],
-                  ],
-                ),
-                trailing: Wrap(
-                  spacing: 4,
-                  children: [
-                    IconButton(
-                      tooltip: 'Analizar con IA',
-                      onPressed: () => _adjudicate(candidate),
-                      icon: const AppIcon(Symbols.auto_awesome_rounded),
-                    ),
-                    IconButton(
-                      tooltip: 'Rechazar',
-                      onPressed: () => _reviewGroup(items, candidate, false),
-                      icon: const AppIcon(Symbols.close_rounded),
-                    ),
-                    IconButton(
-                      tooltip: 'Aprobar',
-                      onPressed: () => _reviewGroup(items, candidate, true),
-                      icon: const AppIcon(Symbols.check_rounded),
+                    const SizedBox(height: 4),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: Wrap(
+                        spacing: 4,
+                        children: [
+                          IconButton(
+                            tooltip: 'Analizar con IA',
+                            onPressed: () => _adjudicate(candidate),
+                            icon: const AppIcon(Symbols.auto_awesome_rounded),
+                          ),
+                          IconButton(
+                            tooltip: 'Rechazar',
+                            onPressed: () => _reviewGroup(items, candidate, false),
+                            icon: const AppIcon(Symbols.close_rounded),
+                          ),
+                          IconButton(
+                            tooltip: 'Aprobar',
+                            onPressed: () => _reviewGroup(items, candidate, true),
+                            icon: const AppIcon(Symbols.check_rounded),
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),
